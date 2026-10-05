@@ -249,6 +249,8 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
             flex: 1,
             height: isExpanded ? '100%' : 'auto',
             paddingTop: isExpanded ? '2px' : '0',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
         />
 
