@@ -96,8 +96,6 @@ function createOffscreenStage(
   bodyText.style.whiteSpace = 'pre-wrap';
   bodyText.style.wordBreak = 'break-word';
   bodyText.style.minHeight = pageIndex === 0 ? '200px' : '320px';
-  bodyText.style.maxHeight = pageIndex === 0 && hasAttachments ? '280px' : '580px';
-  bodyText.style.overflow = 'hidden';
   bodyText.textContent = pageText;
   paper.appendChild(bodyText);
 

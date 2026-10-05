@@ -7,13 +7,13 @@
 export const PAGE_BREAK_DELIMITER = '\n\n---page---\n\n';
 
 // Average characters per line on paper at standard font size (~1.14rem)
-export const LINE_CHAR_BUDGET = 52;
+export const LINE_CHAR_BUDGET = 42;
 
 // Strict visual lines allowed per physical stationery sheet
-// Page 1 with attachments (photos / voice memo): comfortable 12 lines
-export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 12;
-// Clean stationery page (no attachments, or Page 2+): 18 lines with generous bottom margins
-export const MAX_LINES_CLEAN_PAGE = 18;
+// Page 1 with attachments (photos / voice memo): max 6 lines so memories breathe
+export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 6;
+// Clean stationery page (no attachments, or Page 2+): 12 lines with generous 80px+ bottom paper margins
+export const MAX_LINES_CLEAN_PAGE = 12;
 
 /**
  * Calculates visual lines consumed by a string:

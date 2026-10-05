@@ -547,12 +547,10 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                 onUpdateEntry({ ...entry, body: updated });
               }}
               style={{
-                minHeight: currentPageIndex === 0 ? '160px' : '300px',
-                maxHeight: currentPageIndex === 0 && hasAttachments ? '250px' : '475px',
+                minHeight: currentPageIndex === 0 ? '160px' : '260px',
                 outline: 'none',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
-                overflow: 'hidden',
               }}
             >
               {pages[currentPageIndex] || ''}
