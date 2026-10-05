@@ -85,19 +85,115 @@ function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivE
   bodyText.textContent = entry.body || '';
   paper.appendChild(bodyText);
 
-  // Attached Cellotaped Photos
+  // Attached Human Voice Memos
+  const audioAttachments = (entry.attachments || []).filter(a => a.type === 'audio');
+  if (audioAttachments.length > 0) {
+    audioAttachments.forEach((aud) => {
+      const memoWrapper = document.createElement('div');
+      memoWrapper.style.position = 'relative';
+      memoWrapper.style.display = 'inline-flex';
+      memoWrapper.style.alignItems = 'center';
+      memoWrapper.style.gap = '10px';
+      memoWrapper.style.margin = '14px 0 10px 0';
+      memoWrapper.style.padding = '8px 14px';
+      memoWrapper.style.background = '#FAF8F5';
+      memoWrapper.style.border = '1px solid rgba(80, 60, 40, 0.14)';
+      memoWrapper.style.borderRadius = '6px';
+
+      // Cellotape
+      const tape = document.createElement('div');
+      tape.style.position = 'absolute';
+      tape.style.top = '-7px';
+      tape.style.left = '14px';
+      tape.style.width = '38px';
+      tape.style.height = '14px';
+      tape.style.background = 'rgba(255, 255, 255, 0.65)';
+      tape.style.border = '1px solid rgba(255, 255, 255, 0.75)';
+      tape.style.transform = 'rotate(-2deg)';
+      memoWrapper.appendChild(tape);
+
+      // Play icon circle
+      const playIcon = document.createElement('div');
+      playIcon.style.width = '24px';
+      playIcon.style.height = '24px';
+      playIcon.style.borderRadius = '50%';
+      playIcon.style.background = '#3E3733';
+      playIcon.style.display = 'flex';
+      playIcon.style.alignItems = 'center';
+      playIcon.style.justifyContent = 'center';
+      playIcon.innerHTML = `<svg width="9" height="9" viewBox="0 0 24 24" fill="#FFFFFF"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+      memoWrapper.appendChild(playIcon);
+
+      // Acoustic rhythm bars
+      const barsDiv = document.createElement('div');
+      barsDiv.style.display = 'flex';
+      barsDiv.style.alignItems = 'center';
+      barsDiv.style.gap = '2.5px';
+      barsDiv.style.height = '20px';
+      const sampleHeights = [6, 12, 16, 20, 14, 18, 19, 10, 15, 20, 13, 8, 14, 17, 9];
+      sampleHeights.forEach((h) => {
+        const b = document.createElement('div');
+        b.style.width = '2.5px';
+        b.style.height = `${h}px`;
+        b.style.background = '#4A403A';
+        b.style.borderRadius = '1px';
+        barsDiv.appendChild(b);
+      });
+      memoWrapper.appendChild(barsDiv);
+
+      // Duration label
+      const durLabel = document.createElement('span');
+      const secs = aud.duration || 0;
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      durLabel.style.fontFamily = "'DM Mono', monospace";
+      durLabel.style.fontSize = '11px';
+      durLabel.style.color = '#5A4E47';
+      durLabel.textContent = `${m}:${s < 10 ? '0' : ''}${s} • voice memo`;
+      memoWrapper.appendChild(durLabel);
+
+      paper.appendChild(memoWrapper);
+    });
+  }
+
+  // Attached Cellotaped Photos (Optimized multi-photo scrapbook layout)
   if (entry.photos && entry.photos.length > 0) {
-    entry.photos.forEach((photo) => {
+    const gallery = document.createElement('div');
+    gallery.style.display = 'flex';
+    gallery.style.flexWrap = 'wrap';
+    gallery.style.justifyContent = 'center';
+    gallery.style.alignItems = 'center';
+    gallery.style.gap = entry.photos.length === 1 ? '0' : entry.photos.length === 2 ? '14px' : '10px';
+    gallery.style.margin = '18px auto 8px auto';
+    gallery.style.width = '100%';
+    gallery.style.maxWidth = '460px';
+
+    const naturalRotations = [-2.5, 2, -1.8, 2.5, -2, 1.5];
+
+    entry.photos.forEach((photo, idx) => {
+      const photoWidth =
+        entry.photos!.length === 1
+          ? '220px'
+          : entry.photos!.length === 2
+          ? '185px'
+          : entry.photos!.length === 3
+          ? '138px'
+          : '142px';
+
+      const rotation = photo.rotate || naturalRotations[idx % naturalRotations.length];
+
       const photoWrapper = document.createElement('div');
       photoWrapper.style.position = 'relative';
-      photoWrapper.style.display = 'inline-block';
-      photoWrapper.style.margin = '20px auto 10px auto';
+      photoWrapper.style.width = photoWidth;
+      photoWrapper.style.maxWidth = '100%';
+      photoWrapper.style.margin = '4px';
       photoWrapper.style.padding = '6px 6px 12px 6px';
       photoWrapper.style.background = '#FFFFFF';
       photoWrapper.style.borderRadius = '2px';
-      photoWrapper.style.transform = `rotate(${photo.rotate || -1.5}deg)`;
-      photoWrapper.style.maxWidth = '200px';
+      photoWrapper.style.transform = `rotate(${rotation}deg)`;
       photoWrapper.style.border = '1px solid rgba(0, 0, 0, 0.05)';
+      photoWrapper.style.boxSizing = 'border-box';
+      photoWrapper.style.flexShrink = '0';
 
       // Cellotape top
       const tapeTop = document.createElement('div');
@@ -113,16 +209,19 @@ function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivE
       photoWrapper.appendChild(tapeTop);
 
       const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';
       img.src = photo.url;
       img.style.display = 'block';
       img.style.width = '100%';
-      img.style.maxHeight = '150px';
+      img.style.height = entry.photos!.length === 1 ? '150px' : entry.photos!.length === 2 ? '130px' : '105px';
       img.style.objectFit = 'cover';
       img.style.borderRadius = '2px';
       photoWrapper.appendChild(img);
 
-      paper.appendChild(photoWrapper);
+      gallery.appendChild(photoWrapper);
     });
+
+    paper.appendChild(gallery);
   }
 
   container.appendChild(paper);
@@ -275,22 +374,65 @@ export function openVisualPrintBook(entries: Entry[]): void {
       const align = entry.text_align || 'left';
       const dateLabel = formatDateLabel(entry.entry_date);
 
-      const photosHtml = (entry.photos || [])
-        .map(
-          (p) => `
-        <div class="cellotaped-photo" style="transform: rotate(${p.rotate || -1.5}deg);">
-          <div class="cellotape-top"></div>
-          <img src="${p.url}" />
+      const photosCount = (entry.photos || []).length;
+      let photoWidth = '220px';
+      let imgHeight = '150px';
+      if (photosCount === 2) {
+        photoWidth = '185px';
+        imgHeight = '130px';
+      } else if (photosCount === 3) {
+        photoWidth = '135px';
+        imgHeight = '105px';
+      } else if (photosCount >= 4) {
+        photoWidth = '145px';
+        imgHeight = '105px';
+      }
+
+      const photosHtml = photosCount > 0 ? `
+        <div class="letter-scrapbook-gallery">
+          ${entry.photos!.map((p, idx) => {
+            const rot = p.rotate ?? (idx % 2 === 0 ? -1.5 : 1.8);
+            return `
+              <div class="cellotaped-photo" style="width: ${photoWidth}; transform: rotate(${rot}deg);">
+                <div class="cellotape-top"></div>
+                <img src="${p.url}" style="height: ${imgHeight};" />
+              </div>
+            `;
+          }).join('')}
         </div>
-      `
-        )
-        .join('');
+      ` : '';
+
+      const audioMemosHtml = (entry.attachments || [])
+        .filter(a => a.type === 'audio')
+        .map(aud => {
+          const secs = aud.duration || 0;
+          const m = Math.floor(secs / 60);
+          const s = secs % 60;
+          const dur = `${m}:${s < 10 ? '0' : ''}${s}`;
+          return `
+            <div class="human-voice-memo">
+              <div class="cellotape-memo-top"></div>
+              <div class="voice-memo-play-circle">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="#FFFFFF"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <div class="voice-memo-acoustic-bars">
+                <span style="height: 6px;"></span><span style="height: 12px;"></span>
+                <span style="height: 18px;"></span><span style="height: 14px;"></span>
+                <span style="height: 20px;"></span><span style="height: 10px;"></span>
+                <span style="height: 17px;"></span><span style="height: 19px;"></span>
+                <span style="height: 14px;"></span><span style="height: 8px;"></span>
+              </div>
+              <div class="voice-memo-label">${dur} • voice memo</div>
+            </div>
+          `;
+        }).join('');
 
       return `
       <div class="stage-page" style="background-color: ${backdrop};">
         <div class="paper-sheet" style="font-family: ${font}; text-align: ${align};">
           <div class="date-header">${dateLabel}</div>
           <div class="letter-body">${(entry.body || '').replace(/\n/g, '<br/>')}</div>
+          ${audioMemosHtml}
           ${photosHtml}
         </div>
       </div>
@@ -389,21 +531,31 @@ export function openVisualPrintBook(entries: Entry[]): void {
       min-height: 240px;
       word-break: break-word;
     }
+    .letter-scrapbook-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      margin-top: 18px;
+      width: 100%;
+    }
     .cellotaped-photo {
       position: relative;
-      display: inline-block;
-      margin: 16px auto 10px auto;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      max-width: 100%;
+      margin: 4px;
       padding: 6px 6px 12px 6px;
       background: #FFFFFF;
       border-radius: 2px;
-      max-width: 200px;
       border: 1px solid rgba(0,0,0,0.05);
     }
     .cellotaped-photo img {
       width: 100%;
-      max-height: 150px;
       object-fit: cover;
       display: block;
+      border-radius: 2px;
     }
     .cellotape-top {
       position: absolute;
@@ -414,6 +566,54 @@ export function openVisualPrintBook(entries: Entry[]): void {
       height: 18px;
       background: rgba(255, 255, 255, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.7);
+      pointer-events: none;
+    }
+    .human-voice-memo {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 10px 0;
+      padding: 8px 14px;
+      background: #FAF8F5;
+      border: 1px solid rgba(80, 60, 40, 0.14);
+      border-radius: 6px;
+    }
+    .cellotape-memo-top {
+      position: absolute;
+      top: -7px;
+      left: 14px;
+      width: 38px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      transform: rotate(-2deg);
+    }
+    .voice-memo-play-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #3E3733;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .voice-memo-acoustic-bars {
+      display: flex;
+      align-items: center;
+      gap: 2.5px;
+      height: 20px;
+    }
+    .voice-memo-acoustic-bars span {
+      width: 2.5px;
+      background: #4A403A;
+      border-radius: 1px;
+      display: inline-block;
+    }
+    .voice-memo-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #5A4E47;
     }
   </style>
 </head>

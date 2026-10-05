@@ -14,99 +14,16 @@ const DEFAULT_SETTINGS: AppSettings = {
   passcode: '1805',
 };
 
-const SEED_ENTRIES: Entry[] = [
-  {
-    id: 'seed-1',
-    title: "I'd be using",
-    body: "I'd be using\n\ntoday i wished you were in the passenger seat.\n\nthe sunset was the color of persimmons and the radio played that old song you would have either loved or teased me endlessly about. i took the long way home just to keep driving.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    entry_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    for_you: true,
-    is_favorite: true,
-    tags: ['ordinary days', 'drives'],
-    attachments: [],
-    paper_style: 'pink',
-    backdrop_color: '#237A57', // Forest green matching Screenshot 1
-    font_family: 'Schoolbell',
-    font_size: 18,
-    text_align: 'left',
-    stickers: [
-      {
-        id: 'st-love-init',
-        type: 'sticker',
-        content: `<svg viewBox="0 0 160 80" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 45 C10 20, 30 10, 48 24 C55 12, 85 10, 95 28 C108 14, 135 15, 145 35 C152 48, 142 68, 120 72 C95 76, 75 66, 60 70 C40 75, 15 70, 12 45 Z" fill="#FFFFFF"/>
-          <path d="M18 45 C16 25, 32 16, 48 27 C54 18, 80 16, 90 32 C102 20, 128 21, 138 38 C144 50, 135 64, 116 67 C93 70, 75 62, 60 65 C42 69, 21 65, 18 45 Z" fill="#2E1065"/>
-          <text x="80" y="52" text-anchor="middle" font-family="'Gloria Hallelujah', cursive, sans-serif" font-weight="900" font-size="38" fill="#F472B6" stroke="#FFFFFF" stroke-width="1.5">love</text>
-        </svg>`,
-        name: 'Love',
-        x: 6,
-        y: 84, // Bottom left corner matching Screenshot 1
-        rotate: -12,
-        scale: 1.15,
-      },
-    ],
-    photos: [],
-    status: 'instant',
-  },
-  {
-    id: 'seed-2',
-    title: 'The apartment when it rains',
-    body: 'There is a particular kind of quiet in this apartment when the rain hits the fire escape outside the bedroom window.\n\nI made too much soup again. I always cook as if there are two of us here. I sat at the small round wooden table and read three pages of a novel before looking up, half-expecting to see your coat hanging by the doorway.\n\nI want you to know this version of me too—the one who learned how to be solitary without being bitter.',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    entry_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    for_you: true,
-    is_favorite: false,
-    tags: ['home', 'solitude', 'rain'],
-    attachments: [],
-    paper_style: 'brown',
-    backdrop_color: '#944F00', // Caramel brown matching Screenshot 5
-    font_family: 'Instrument Serif',
-    font_size: 19,
-    text_align: 'left',
-    stickers: [],
-    photos: [],
-    status: 'scheduled',
-  },
-  {
-    id: 'seed-3',
-    title: 'Checkout line laughter',
-    body: "I heard someone laugh today in the checkout line and it caught my attention so sharply my heart leaped for a split second, wondering if it belonged to you. Then I remembered I don't even know what your laugh sounds like yet.",
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 22).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 22).toISOString(),
-    entry_date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 22).toISOString(),
-    for_you: false,
-    is_favorite: false,
-    tags: ['fragments'],
-    attachments: [],
-    paper_style: 'notebook',
-    backdrop_color: '#1A2B4C',
-    font_family: 'Schoolbell',
-    font_size: 17,
-    text_align: 'left',
-    stickers: [
-      {
-        id: 'st-goodvibes-init',
-        type: 'sticker',
-        content: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="44" fill="#FFFFFF"/>
-          <circle cx="50" cy="50" r="38" fill="#F59E0B"/>
-          <text x="50" y="45" text-anchor="middle" font-family="'Schoolbell', sans-serif" font-weight="bold" font-size="14" fill="#FFFFFF">GOOD</text>
-          <text x="50" y="62" text-anchor="middle" font-family="'Schoolbell', sans-serif" font-weight="bold" font-size="15" fill="#FFFFFF">VIBES</text>
-        </svg>`,
-        name: 'Good Vibes',
-        x: 75,
-        y: 8,
-        rotate: 15,
-        scale: 1,
-      }
-    ],
-    photos: [],
-    status: 'instant',
-  }
-];
+export function isDemoEntry(e: Entry): boolean {
+  if (!e) return false;
+  return (
+    e.id.startsWith('seed-') ||
+    e.title === "I'd be using" ||
+    e.title === "The apartment when it rains" ||
+    e.title === "Checkout line laughter" ||
+    (typeof e.body === 'string' && e.body.includes("passenger seat"))
+  );
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -138,13 +55,23 @@ export async function getAllEntries(): Promise<Entry[]> {
         .select('*')
         .order('entry_date', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        // Cache to IndexedDB in background
+      if (!error && data) {
+        // Scrub demo entries if any exist in Supabase
+        const demoIds = (data as Entry[]).filter(isDemoEntry).map(e => e.id);
+        if (demoIds.length > 0) {
+          await supabase.from('entries').delete().in('id', demoIds);
+        }
+
+        const validEntries = (data as Entry[]).filter(e => !isDemoEntry(e));
+
+        // Sync valid entries to IndexedDB and purge demo entries locally
         const db = await openDB();
         const tx = db.transaction(STORE_ENTRIES, 'readwrite');
         const store = tx.objectStore(STORE_ENTRIES);
-        data.forEach((e) => store.put(e as Entry));
-        return data as Entry[];
+        demoIds.forEach(id => store.delete(id));
+        validEntries.forEach((e) => store.put(e));
+
+        return validEntries;
       }
     } catch (err) {
       console.warn('Supabase fetch failed, falling back to local database:', err);
@@ -154,20 +81,24 @@ export async function getAllEntries(): Promise<Entry[]> {
   // Fallback to local IndexedDB
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_ENTRIES, 'readonly');
+    const transaction = db.transaction(STORE_ENTRIES, 'readwrite');
     const store = transaction.objectStore(STORE_ENTRIES);
     const request = store.getAll();
 
     request.onsuccess = async () => {
-      let entries: Entry[] = request.result || [];
-      if (entries.length === 0) {
-        for (const seed of SEED_ENTRIES) {
-          await saveEntry(seed);
+      const all: Entry[] = request.result || [];
+      // Clean out any demo entries that were stored locally
+      const cleanEntries: Entry[] = [];
+      for (const e of all) {
+        if (isDemoEntry(e)) {
+          store.delete(e.id);
+        } else {
+          cleanEntries.push(e);
         }
-        entries = [...SEED_ENTRIES];
       }
-      entries.sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime());
-      resolve(entries);
+
+      cleanEntries.sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime());
+      resolve(cleanEntries);
     };
 
     request.onerror = () => reject(request.error);

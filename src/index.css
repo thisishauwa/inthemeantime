@@ -82,20 +82,17 @@ input, textarea, select {
 .cellotaped-photo {
   position: relative;
   display: inline-block;
-  margin: 16px auto 10px auto;
   padding: 6px 6px 10px 6px;
   background: #FFFFFF;
   border-radius: 2px;
-  transform: rotate(-2deg);
-  max-width: 220px;
   box-shadow: none !important; /* Strictly no shadows */
   border: 1px solid rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
 }
 
 .cellotaped-photo img {
   display: block;
   width: 100%;
-  max-height: 160px;
   object-fit: cover;
   border-radius: 2px;
 }

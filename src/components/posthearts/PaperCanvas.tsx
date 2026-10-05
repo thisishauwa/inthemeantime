@@ -4,10 +4,10 @@ import {
   AlignCenter, 
   AlignRight, 
   ChevronDown, 
-  Trash2,
-  Volume2
+  Trash2
 } from 'lucide-react';
 import { BACKDROP_COLORS, FONTS } from './stickerData';
+import { HumanVoiceNotePlayer } from './HumanVoiceNotePlayer';
 import type { Entry } from '../../types';
 
 interface PaperCanvasProps {
@@ -452,68 +452,110 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
               wordBreak: 'break-word',
             }}
           >
-            {entry.body || "today i wished you were in the passenger seat."}
+            {entry.body}
           </div>
 
-          {/* Attached Audio Voice Note on Paper */}
+          {/* Attached Human Voice Notes on Paper */}
           {entry.attachments?.some(a => a.type === 'audio') && (
-            <div style={{
-              margin: '18px 0',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(4px)',
-              border: '1px solid rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}>
-              <Volume2 size={16} style={{ color: '#5C59ED' }} />
-              <div style={{ flex: 1 }}>
-                {entry.attachments.filter(a => a.type === 'audio').map(aud => (
-                  <audio key={aud.id} controls src={aud.file_url} style={{ width: '100%', height: '32px' }} />
-                ))}
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0' }}>
+              {entry.attachments.filter(a => a.type === 'audio').map(aud => (
+                <HumanVoiceNotePlayer
+                  key={aud.id}
+                  id={aud.id}
+                  url={aud.file_url}
+                  duration={aud.duration}
+                  filename={aud.filename}
+                  onDelete={() => {
+                    const filtered = (entry.attachments || []).filter(a => a.id !== aud.id);
+                    onUpdateEntry({ ...entry, attachments: filtered });
+                  }}
+                />
+              ))}
             </div>
           )}
 
-          {/* Photos CELLOTAPED to the Paper! */}
-          {photos.map((photo) => (
+          {/* Photos CELLOTAPED to the Paper! (Optimized multi-photo scrapbook layout) */}
+          {photos.length > 0 && (
             <div
-              key={photo.id}
-              className="cellotaped-photo"
+              className={`letter-scrapbook-gallery photos-count-${Math.min(photos.length, 4)}`}
               style={{
-                transform: `rotate(${photo.rotate || -1.5}deg)`,
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: photos.length === 1 ? '0' : photos.length === 2 ? '14px' : '10px',
+                margin: '18px auto 8px auto',
+                width: '100%',
+                maxWidth: '460px',
               }}
             >
-              {/* Frosted Cellotape Strips */}
-              <div className="cellotape-strip-top" />
-              <div className="cellotape-strip-corner" />
+              {photos.map((photo, idx) => {
+                const photoWidth =
+                  photos.length === 1
+                    ? '220px'
+                    : photos.length === 2
+                    ? '185px'
+                    : photos.length === 3
+                    ? '138px'
+                    : '142px';
 
-              <img src={photo.url} alt="Cellotaped memory" />
+                const naturalRotations = [-2.5, 2, -1.8, 2.5, -2, 1.5];
+                const rotation = photo.rotate || naturalRotations[idx % naturalRotations.length];
 
-              <button
-                onClick={() => handleRemovePhoto(photo.id)}
-                style={{
-                  position: 'absolute',
-                  bottom: '6px',
-                  right: '6px',
-                  background: 'rgba(0,0,0,0.6)',
-                  color: '#FFF',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 20,
-                }}
-                title="Remove photo"
-              >
-                <Trash2 size={11} />
-              </button>
+                return (
+                  <div
+                    key={photo.id}
+                    className="cellotaped-photo"
+                    style={{
+                      width: photoWidth,
+                      maxWidth: '100%',
+                      margin: '4px',
+                      transform: `rotate(${rotation}deg)`,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {/* Frosted Cellotape Strips */}
+                    <div className="cellotape-strip-top" />
+                    <div className="cellotape-strip-corner" />
+
+                    <img
+                      src={photo.url}
+                      alt="Cellotaped memory"
+                      style={{
+                        width: '100%',
+                        height: photos.length === 1 ? '150px' : photos.length === 2 ? '130px' : '105px',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+
+                    <button
+                      onClick={() => handleRemovePhoto(photo.id)}
+                      style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        right: '6px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: '#FFF',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 20,
+                        cursor: 'pointer',
+                        border: 'none',
+                      }}
+                      title="Remove photo"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

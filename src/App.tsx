@@ -4,8 +4,7 @@ import {
   getAllEntries, 
   saveEntry, 
   deleteEntry,
-  getSettings, 
-  saveSettings 
+  getSettings 
 } from './lib/storage';
 import { PostheartsSidebar } from './components/posthearts/PostheartsSidebar';
 import { PromptInputBar } from './components/posthearts/PromptInputBar';
@@ -13,7 +12,6 @@ import { PaperCanvas } from './components/posthearts/PaperCanvas';
 import { SentLettersView } from './components/posthearts/SentLettersView';
 import { ExportModal } from './components/ExportModal';
 import { DownloadModal } from './components/posthearts/DownloadModal';
-import { SettingsModal } from './components/SettingsModal';
 import { MobileNoticeScreen } from './components/MobileNoticeScreen';
 import { PasscodeLock } from './components/PasscodeLock';
 import { 
@@ -37,7 +35,6 @@ export function App() {
 
   // Modals
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
 
   // Passcode gate for Letters Archive (Passcode: 1805)
@@ -91,8 +88,8 @@ export function App() {
 
   const activeEntry: Entry = entries.find((e) => e.id === activeEntryId) || {
     id: 'new_' + Date.now(),
-    title: 'Fragment',
-    body: 'today i wished you were in the passenger seat.',
+    title: 'Untitled Letter',
+    body: '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     entry_date: new Date().toISOString(),
@@ -320,7 +317,6 @@ export function App() {
         onDuplicateEntry={handleDuplicateEntry}
         activeView={activeView}
         setActiveView={setActiveView}
-        onOpenSettings={() => setIsSettingsOpen(true)}
         isArchiveUnlocked={isArchiveUnlocked}
         onOpenPasscodeModal={handleOpenPasscodeModal}
         onLockArchive={() => setIsArchiveUnlocked(false)}
@@ -412,18 +408,7 @@ export function App() {
         />
       )}
 
-      {/* Settings & Privacy modal */}
-      {isSettingsOpen && (
-        <SettingsModal
-          settings={settings}
-          onSaveSettings={async (s) => {
-            setSettings(s);
-            await saveSettings(s);
-          }}
-          onClose={() => setIsSettingsOpen(false)}
-          onReloadEntries={loadData}
-        />
-      )}
+
 
       {/* Passcode modal for private letters archive (Code: 1805) */}
       <PasscodeLock

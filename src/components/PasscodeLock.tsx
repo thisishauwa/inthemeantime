@@ -41,6 +41,29 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
     }
   }, [pin, correctPasscode, onUnlock]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Support 0-9 digits from both standard top row and physical numpad
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        if (pin.length < 4 && !error) {
+          setPin((prev) => (prev.length < 4 ? prev + e.key : prev));
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        setPin((prev) => prev.slice(0, -1));
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, pin, error, onClose]);
+
   if (!isOpen) return null;
 
   const handleKeyPress = (num: string) => {
@@ -227,14 +250,14 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
           </p>
         )}
 
-        {/* Numeric Keypad */}
+        {/* Numeric Keypad (Strictly circular buttons, no ovals) */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
+            gridTemplateColumns: 'repeat(3, 56px)',
+            justifyContent: 'center',
+            gap: '12px 20px',
             width: '100%',
-            maxWidth: '240px',
             marginBottom: '10px',
           }}
         >
@@ -244,18 +267,21 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
               type="button"
               onClick={() => handleKeyPress(digit)}
               style={{
-                height: '48px',
+                width: '56px',
+                height: '56px',
                 borderRadius: '50%',
                 background: '#F9FAFB',
-                border: '1px solid #F0F0F0',
-                fontSize: '1.25rem',
+                border: '1px solid #ECEFF1',
+                fontSize: '1.3rem',
                 fontWeight: 600,
                 color: '#111827',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                transition: 'background 0.12s ease',
+                transition: 'all 0.12s ease',
+                boxSizing: 'border-box',
+                padding: 0,
               }}
               onMouseOver={(e) => (e.currentTarget.style.background = '#E5E7EB')}
               onMouseOut={(e) => (e.currentTarget.style.background = '#F9FAFB')}
@@ -269,17 +295,19 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
             type="button"
             onClick={onClose}
             style={{
-              height: '48px',
+              width: '56px',
+              height: '56px',
               borderRadius: '50%',
               background: 'transparent',
               border: 'none',
-              fontSize: '0.78rem',
+              fontSize: '0.8rem',
               color: '#6B7280',
               fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              padding: 0,
             }}
           >
             Cancel
@@ -290,18 +318,21 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
             type="button"
             onClick={() => handleKeyPress('0')}
             style={{
-              height: '48px',
+              width: '56px',
+              height: '56px',
               borderRadius: '50%',
               background: '#F9FAFB',
-              border: '1px solid #F0F0F0',
-              fontSize: '1.25rem',
+              border: '1px solid #ECEFF1',
+              fontSize: '1.3rem',
               fontWeight: 600,
               color: '#111827',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              transition: 'background 0.12s ease',
+              transition: 'all 0.12s ease',
+              boxSizing: 'border-box',
+              padding: 0,
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = '#E5E7EB')}
             onMouseOut={(e) => (e.currentTarget.style.background = '#F9FAFB')}
@@ -314,7 +345,8 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
             type="button"
             onClick={handleDelete}
             style={{
-              height: '48px',
+              width: '56px',
+              height: '56px',
               borderRadius: '50%',
               background: 'transparent',
               border: 'none',
@@ -323,6 +355,7 @@ export const PasscodeLock: React.FC<PasscodeLockProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              padding: 0,
             }}
             onMouseOver={(e) => (e.currentTarget.style.color = '#111827')}
             onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}

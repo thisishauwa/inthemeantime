@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, BookOpen, Settings, MoreHorizontal, Pencil, Copy, Trash2, Lock, Unlock } from 'lucide-react';
+import { PlusCircle, BookOpen, MoreHorizontal, Pencil, Copy, Trash2, Lock, Unlock } from 'lucide-react';
 import type { Entry } from '../../types';
 
 interface PostheartsSidebarProps {
@@ -12,7 +12,6 @@ interface PostheartsSidebarProps {
   onDuplicateEntry?: (id: string) => void;
   activeView: 'editor' | 'sent';
   setActiveView: (view: 'editor' | 'sent') => void;
-  onOpenSettings: () => void;
   isArchiveUnlocked?: boolean;
   onOpenPasscodeModal?: (targetEntryId?: string) => void;
   onLockArchive?: () => void;
@@ -28,7 +27,6 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
   onDuplicateEntry,
   activeView,
   setActiveView,
-  onOpenSettings,
   isArchiveUnlocked = false,
   onOpenPasscodeModal,
   onLockArchive,
@@ -80,7 +78,7 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
             fontWeight: 400,
             marginTop: '4px',
           }}>
-            letters &amp; fragments for one day
+            Letters and fragments for one day
           </span>
         </div>
       </div>
@@ -155,11 +153,12 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
-                color: '#10B981',
+                color: '#8C8C8C', /* Ash gray */
                 padding: '2px 4px',
+                cursor: 'pointer',
               }}
             >
-              <Unlock size={13} />
+              <Unlock size={14} />
             </span>
           ) : (
             <span
@@ -168,11 +167,11 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
-                color: '#9CA3AF',
+                color: '#8C8C8C', /* Ash gray */
                 padding: '2px 4px',
               }}
             >
-              <Lock size={13} />
+              <Lock size={14} />
             </span>
           )}
         </button>
@@ -185,16 +184,8 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
           color: '#6B7280',
           fontWeight: 500,
           padding: '16px 12px 10px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
         }}>
           <span>Memories</span>
-          {!isArchiveUnlocked && (
-            <span style={{ fontSize: '0.72rem', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <Lock size={11} /> Locked
-            </span>
-          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -346,42 +337,6 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
         </div>
       </div>
 
-      {/* Clean Bottom Footer (No cringe text) */}
-      <div style={{
-        padding: '12px 14px',
-        borderTop: '1px solid #ECEFF1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <button
-          onClick={onOpenSettings}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '0.84rem',
-            color: '#6B7280',
-            padding: '6px 10px',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background 0.15s ease, color 0.15s ease',
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = '#F3F4F6';
-            e.currentTarget.style.color = '#111827';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#6B7280';
-          }}
-          title="Privacy & Settings"
-        >
-          <Settings size={16} />
-          <span>Settings</span>
-        </button>
-      </div>
     </aside>
   );
 };

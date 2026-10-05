@@ -96,9 +96,9 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && onPhotoUploaded) {
-      onPhotoUploaded(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0 && onPhotoUploaded) {
+      files.forEach((file) => onPhotoUploaded(file));
     }
     e.target.value = '';
   };
@@ -128,10 +128,11 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
             Express how you feel
           </span>
 
-          {/* Photo attach */}
+          {/* Photo attach (multiple allowed) */}
           <input
             type="file"
             accept="image/*"
+            multiple
             ref={photoInputRef}
             onChange={handleFileChange}
             style={{ display: 'none' }}

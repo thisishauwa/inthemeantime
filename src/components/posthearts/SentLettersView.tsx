@@ -226,7 +226,7 @@ export const SentLettersView: React.FC<SentLettersViewProps> = ({
                     border: '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
-                  {letter.body || 'today i wished you were in the passenger seat.'}
+                  {letter.body ? letter.body : <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>A quiet, unwritten letter...</span>}
                 </div>
 
                 <div>
