@@ -69,11 +69,15 @@ export function App() {
         getSettings(),
       ]);
 
-      setEntries(fetchedEntries);
+      const cleanedEntries = fetchedEntries.map((e) => ({
+        ...e,
+        title: e.title === 'Untitled Letter' ? '' : (e.title || ''),
+      }));
+      setEntries(cleanedEntries);
       setSettings(fetchedSettings);
 
-      if (fetchedEntries.length > 0) {
-        setActiveEntryId(fetchedEntries[0].id);
+      if (cleanedEntries.length > 0) {
+        setActiveEntryId(cleanedEntries[0].id);
       }
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -88,7 +92,7 @@ export function App() {
 
   const activeEntry: Entry = entries.find((e) => e.id === activeEntryId) || {
     id: 'new_' + Date.now(),
-    title: 'Untitled Letter',
+    title: '',
     body: '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -108,20 +112,25 @@ export function App() {
 
   // Update active entry with debounced autosave
   const handleUpdateActiveEntry = (updated: Entry) => {
+    const sanitized = {
+      ...updated,
+      title: updated.title === 'Untitled Letter' ? '' : (updated.title || ''),
+    };
+
     setEntries((prev) => {
-      const idx = prev.findIndex((e) => e.id === updated.id);
+      const idx = prev.findIndex((e) => e.id === sanitized.id);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = updated;
+        copy[idx] = sanitized;
         return copy;
       } else {
-        return [updated, ...prev];
+        return [sanitized, ...prev];
       }
     });
 
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = window.setTimeout(async () => {
-      await saveEntry(updated);
+      await saveEntry(sanitized);
     }, 600);
   };
 
@@ -129,7 +138,7 @@ export function App() {
     const newId = 'letter_' + Date.now();
     const newLetter: Entry = {
       id: newId,
-      title: 'Untitled Letter',
+      title: '',
       body: '',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

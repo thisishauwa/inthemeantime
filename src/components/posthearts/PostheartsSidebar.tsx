@@ -43,6 +43,20 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
+  const getLetterDisplayTitle = (entry: Entry): string => {
+    if (entry.title && entry.title.trim() && entry.title !== 'Untitled Letter' && entry.title !== 'Untitled') {
+      return entry.title.trim();
+    }
+    const trimmed = (entry.body || '').trim();
+    if (trimmed) {
+      const firstLine = trimmed.split('\n')[0].trim();
+      if (firstLine) {
+        return firstLine.slice(0, 26);
+      }
+    }
+    return 'New letter';
+  };
+
   return (
     <aside style={{
       width: '260px',
@@ -187,13 +201,12 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
         }}>
           <span>Memories</span>
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {entries.map((entry) => {
             const isSelected = activeView === 'editor' && activeEntryId === entry.id;
             const isMenuOpen = menuOpenEntryId === entry.id;
             const isEditing = editingEntryId === entry.id;
-            const displayTitle = entry.title || (entry.body.trim().split('\n')[0].slice(0, 24) || 'Untitled');
+            const displayTitle = getLetterDisplayTitle(entry);
 
             return (
               <div
@@ -294,7 +307,7 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
                       className="letter-dropdown-item"
                       onClick={() => {
                         setEditingEntryId(entry.id);
-                        setEditingTitle(entry.title || displayTitle);
+                        setEditingTitle(entry.title && entry.title !== 'Untitled Letter' ? entry.title : displayTitle);
                         setMenuOpenEntryId(null);
                       }}
                     >

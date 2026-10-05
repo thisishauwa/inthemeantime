@@ -306,7 +306,9 @@ export const SentLettersView: React.FC<SentLettersViewProps> = ({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}>
-                    {letter.title || letter.body.slice(0, 32) || 'Untitled Letter'}
+                    {(letter.title && letter.title !== 'Untitled Letter' && letter.title !== 'Untitled')
+                      ? letter.title
+                      : (letter.body.trim().split('\n')[0].slice(0, 36) || 'New letter')}
                   </h3>
                 </div>
               </div>

@@ -547,8 +547,8 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                 onUpdateEntry({ ...entry, body: updated });
               }}
               style={{
-                minHeight: currentPageIndex === 0 ? '160px' : '280px',
-                maxHeight: currentPageIndex === 0 && hasAttachments ? '210px' : '440px',
+                minHeight: currentPageIndex === 0 ? '160px' : '300px',
+                maxHeight: currentPageIndex === 0 && hasAttachments ? '250px' : '475px',
                 outline: 'none',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',

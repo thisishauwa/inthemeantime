@@ -7,13 +7,13 @@
 export const PAGE_BREAK_DELIMITER = '\n\n---page---\n\n';
 
 // Average characters per line on paper at standard font size (~1.14rem)
-export const LINE_CHAR_BUDGET = 42;
+export const LINE_CHAR_BUDGET = 52;
 
 // Strict visual lines allowed per physical stationery sheet
-// Page 1 with attachments (photos / voice memo): max 8 lines so attachments fit comfortably
-export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 8;
-// Clean stationery page (no attachments, or Page 2+): max 14 lines so text never bleeds off paper
-export const MAX_LINES_CLEAN_PAGE = 14;
+// Page 1 with attachments (photos / voice memo): comfortable 12 lines
+export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 12;
+// Clean stationery page (no attachments, or Page 2+): 18 lines with generous bottom margins
+export const MAX_LINES_CLEAN_PAGE = 18;
 
 /**
  * Calculates visual lines consumed by a string:
@@ -119,6 +119,7 @@ export function splitLetterIntoPages(fullBody: string, hasAttachments: boolean =
 
 /**
  * Paginates continuous text into pages respecting line limits.
+ * Letters now fill pages naturally (like genuine stationery) instead of breaking prematurely.
  */
 function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAttachments: boolean): string[] {
   const paragraphs = text.split(/\n\n+/);
@@ -129,25 +130,26 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
   for (const para of paragraphs) {
     const maxLines = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
 
-    // Test if entire paragraph fits in remaining space of current page
+    // 1. If entire paragraph fits in remaining space of current page, append it
     const testWithPara = currentPage ? currentPage + '\n\n' + para : para;
     if (countVisualLines(testWithPara) <= maxLines) {
       currentPage = testWithPara;
-    } else {
-      // If current page already has content, push it to finish that page
-      if (currentPage) {
-        pages.push(currentPage);
-        currentPage = '';
-        isFirst = false;
-      }
+      continue;
+    }
+
+    // 2. If current page is already well-filled (>= 65% capacity),
+    // start this paragraph cleanly on the next page
+    const currentLines = countVisualLines(currentPage);
+    const minFillThreshold = Math.floor(maxLines * 0.65);
+    if (currentPage && currentLines >= minFillThreshold) {
+      pages.push(currentPage);
+      currentPage = '';
+      isFirst = false;
 
       const nextMaxLines = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
-
-      // If the paragraph itself fits on a fresh page:
       if (countVisualLines(para) <= nextMaxLines) {
         currentPage = para;
       } else {
-        // Paragraph is longer than a full page; subdivide it
         const chunks = splitLongParagraph(para, nextMaxLines);
         for (let i = 0; i < chunks.length; i++) {
           if (i === chunks.length - 1) {
@@ -157,6 +159,44 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
             isFirst = false;
           }
         }
+      }
+      continue;
+    }
+
+    // 3. Otherwise, current page still has plenty of space.
+    // Break the paragraph across pages so the page isn't left awkwardly empty.
+    const sentences = para.match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g) || [para];
+    let sentenceIdx = 0;
+    while (sentenceIdx < sentences.length) {
+      const sentence = sentences[sentenceIdx].trim();
+      const testCandidate = currentPage ? currentPage + (currentPage.endsWith('\n') ? '' : ' ') + sentence : sentence;
+      const targetMax = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+
+      if (countVisualLines(testCandidate) <= targetMax) {
+        currentPage = testCandidate;
+        sentenceIdx++;
+      } else {
+        if (currentPage) {
+          pages.push(currentPage);
+          currentPage = '';
+          isFirst = false;
+        }
+        const remainingText = sentences.slice(sentenceIdx).join(' ').trim();
+        const nextTargetMax = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+        if (countVisualLines(remainingText) <= nextTargetMax) {
+          currentPage = remainingText;
+        } else {
+          const chunks = splitLongParagraph(remainingText, nextTargetMax);
+          for (let i = 0; i < chunks.length; i++) {
+            if (i === chunks.length - 1) {
+              currentPage = chunks[i];
+            } else {
+              pages.push(chunks[i]);
+              isFirst = false;
+            }
+          }
+        }
+        break;
       }
     }
   }
