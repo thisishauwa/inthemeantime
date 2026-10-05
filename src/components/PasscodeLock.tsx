@@ -1,129 +1,336 @@
-import React, { useState } from 'react';
-import { Lock, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Lock, X, Delete } from 'lucide-react';
 
 interface PasscodeLockProps {
-  correctPasscode: string;
+  correctPasscode?: string;
+  isOpen: boolean;
   onUnlock: () => void;
+  onClose: () => void;
 }
 
-export const PasscodeLock: React.FC<PasscodeLockProps> = ({ correctPasscode, onUnlock }) => {
+export const PasscodeLock: React.FC<PasscodeLockProps> = ({
+  correctPasscode = '1805',
+  isOpen,
+  onUnlock,
+  onClose,
+}) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pin === correctPasscode) {
-      onUnlock();
-    } else {
-      setError(true);
+  useEffect(() => {
+    if (isOpen) {
       setPin('');
-      setTimeout(() => setError(false), 1500);
+      setError(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (pin.length === 4) {
+      if (pin === correctPasscode) {
+        onUnlock();
+      } else {
+        setError(true);
+        setTimeout(() => {
+          setPin('');
+          setError(false);
+          inputRef.current?.focus();
+        }, 800);
+      }
+    }
+  }, [pin, correctPasscode, onUnlock]);
+
+  if (!isOpen) return null;
+
+  const handleKeyPress = (num: string) => {
+    if (pin.length < 4 && !error) {
+      setPin((prev) => prev + num);
+    }
+  };
+
+  const handleDelete = () => {
+    if (pin.length > 0 && !error) {
+      setPin((prev) => prev.slice(0, -1));
     }
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'var(--bg-primary)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 200,
-      padding: '20px',
-    }}>
-      <div style={{
-        maxWidth: '320px',
-        width: '100%',
-        textAlign: 'center',
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '50%',
-          background: 'var(--bg-secondary)',
-          color: 'var(--accent)',
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        userSelect: 'none',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '360px',
+          background: '#FFFFFF',
+          borderRadius: '24px',
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+          padding: '32px 28px 28px 28px',
+          textAlign: 'center',
+          position: 'relative',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 16px auto',
-        }}>
-          <Lock size={20} />
+          animation: error ? 'shake 0.4s ease' : 'none',
+        }}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#9CA3AF',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.color = '#111827')}
+          onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Lock Icon */}
+        <div
+          style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '50%',
+            background: error ? '#FEE2E2' : '#F0F0F0',
+            color: error ? '#DC2626' : '#5C59ED',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '16px',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Lock size={22} />
         </div>
 
-        <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '1.8rem',
-          color: 'var(--text-primary)',
-          marginBottom: '6px',
-        }}>
-          In the Meantime
-        </h1>
+        {/* Title */}
+        <h3
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            color: '#080808',
+            letterSpacing: '-0.02em',
+            marginBottom: '6px',
+          }}
+        >
+          Private Letters Archive
+        </h3>
 
-        <p style={{
-          fontSize: '0.8rem',
-          color: 'var(--text-muted)',
-          fontFamily: 'var(--font-serif)',
-          fontStyle: 'italic',
-          marginBottom: '24px',
-        }}>
-          A quiet, private space. Enter passcode to open archive.
+        <p
+          style={{
+            fontSize: '0.84rem',
+            color: '#595959',
+            lineHeight: 1.5,
+            marginBottom: '24px',
+            maxWidth: '260px',
+          }}
+        >
+          This archive is protected. Enter the 4-digit code to view letters.
         </p>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="password"
-            autoFocus
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            placeholder="••••"
+        {/* Hidden keyboard input for accessibility and physical typing */}
+        <input
+          ref={inputRef}
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+            setPin(val);
+          }}
+          style={{
+            position: 'absolute',
+            opacity: 0,
+            pointerEvents: 'none',
+            top: 0,
+            left: 0,
+          }}
+        />
+
+        {/* 4 Dot Indicators */}
+        <div
+          onClick={() => inputRef.current?.focus()}
+          style={{
+            display: 'flex',
+            gap: '16px',
+            marginBottom: error ? '10px' : '26px',
+            cursor: 'text',
+          }}
+        >
+          {[0, 1, 2, 3].map((idx) => {
+            const isFilled = pin.length > idx;
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  border: error
+                    ? '2px solid #DC2626'
+                    : isFilled
+                    ? '2px solid #5C59ED'
+                    : '2px solid #D1D5DB',
+                  background: error
+                    ? '#DC2626'
+                    : isFilled
+                    ? '#5C59ED'
+                    : 'transparent',
+                  transition: 'all 0.15s ease',
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <p
             style={{
-              width: '140px',
-              fontSize: '1.4rem',
-              letterSpacing: '0.4em',
-              textAlign: 'center',
-              padding: '10px',
-              background: 'var(--bg-secondary)',
-              border: `1px solid ${error ? '#B43C3C' : 'var(--border-light)'}`,
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-primary)',
+              fontSize: '0.78rem',
+              color: '#DC2626',
+              fontWeight: 500,
               marginBottom: '16px',
             }}
-          />
+          >
+            Incorrect code. Access denied.
+          </p>
+        )}
 
-          {error && (
-            <div style={{
-              fontSize: '0.75rem',
-              color: '#B43C3C',
-              fontStyle: 'italic',
-              marginBottom: '12px',
-            }}>
-              Incorrect passcode
-            </div>
-          )}
-
-          <div>
+        {/* Numeric Keypad */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '10px',
+            width: '100%',
+            maxWidth: '240px',
+            marginBottom: '10px',
+          }}
+        >
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
-              type="submit"
+              key={digit}
+              type="button"
+              onClick={() => handleKeyPress(digit)}
               style={{
-                display: 'inline-flex',
+                height: '48px',
+                borderRadius: '50%',
+                background: '#F9FAFB',
+                border: '1px solid #F0F0F0',
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                color: '#111827',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 20px',
-                borderRadius: '999px',
-                background: 'var(--accent)',
-                color: '#FFF',
-                fontSize: '0.84rem',
-                fontWeight: 500,
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.12s ease',
               }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#E5E7EB')}
+              onMouseOut={(e) => (e.currentTarget.style.background = '#F9FAFB')}
             >
-              <span>Open Archive</span>
-              <ArrowRight size={14} />
+              {digit}
             </button>
-          </div>
-        </form>
+          ))}
+
+          {/* Blank or Cancel */}
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              height: '48px',
+              borderRadius: '50%',
+              background: 'transparent',
+              border: 'none',
+              fontSize: '0.78rem',
+              color: '#6B7280',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+
+          {/* 0 */}
+          <button
+            type="button"
+            onClick={() => handleKeyPress('0')}
+            style={{
+              height: '48px',
+              borderRadius: '50%',
+              background: '#F9FAFB',
+              border: '1px solid #F0F0F0',
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              color: '#111827',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background 0.12s ease',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#E5E7EB')}
+            onMouseOut={(e) => (e.currentTarget.style.background = '#F9FAFB')}
+          >
+            0
+          </button>
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={handleDelete}
+            style={{
+              height: '48px',
+              borderRadius: '50%',
+              background: 'transparent',
+              border: 'none',
+              color: '#6B7280',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.color = '#111827')}
+            onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}
+            title="Delete"
+          >
+            <Delete size={20} />
+          </button>
+        </div>
       </div>
     </div>
   );

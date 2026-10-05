@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, BookOpen, Settings, MoreHorizontal, Pencil, Copy, Trash2 } from 'lucide-react';
+import { PlusCircle, BookOpen, Settings, MoreHorizontal, Pencil, Copy, Trash2, Lock, Unlock } from 'lucide-react';
 import type { Entry } from '../../types';
 
 interface PostheartsSidebarProps {
@@ -13,6 +13,9 @@ interface PostheartsSidebarProps {
   activeView: 'editor' | 'sent';
   setActiveView: (view: 'editor' | 'sent') => void;
   onOpenSettings: () => void;
+  isArchiveUnlocked?: boolean;
+  onOpenPasscodeModal?: (targetEntryId?: string) => void;
+  onLockArchive?: () => void;
 }
 
 export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
@@ -26,6 +29,9 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
   activeView,
   setActiveView,
   onOpenSettings,
+  isArchiveUnlocked = false,
+  onOpenPasscodeModal,
+  onLockArchive,
 }) => {
   const [menuOpenEntryId, setMenuOpenEntryId] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -109,7 +115,13 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveView('sent')}
+          onClick={() => {
+            if (isArchiveUnlocked) {
+              setActiveView('sent');
+            } else {
+              onOpenPasscodeModal?.();
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -122,6 +134,8 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
             background: activeView === 'sent' ? '#F0F0F0' : 'transparent',
             textAlign: 'left',
             transition: 'background 0.15s ease',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
           onMouseOver={(e) => (e.currentTarget.style.background = '#F5F5F5')}
           onMouseOut={(e) => {
@@ -130,6 +144,37 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
         >
           <BookOpen size={17} style={{ color: '#595959' }} />
           <span>Letters ({entries.length})</span>
+          {isArchiveUnlocked ? (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onLockArchive?.();
+              }}
+              title="Lock letters archive"
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#10B981',
+                padding: '2px 4px',
+              }}
+            >
+              <Unlock size={13} />
+            </span>
+          ) : (
+            <span
+              title="Protected by passcode"
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#9CA3AF',
+                padding: '2px 4px',
+              }}
+            >
+              <Lock size={13} />
+            </span>
+          )}
         </button>
       </div>
 
@@ -140,8 +185,16 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
           color: '#6B7280',
           fontWeight: 500,
           padding: '16px 12px 10px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
           <span>Memories</span>
+          {!isArchiveUnlocked && (
+            <span style={{ fontSize: '0.72rem', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <Lock size={11} /> Locked
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -159,8 +212,12 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
                 <div
                   className={`letter-sidebar-row ${isSelected ? 'is-selected' : ''} ${isMenuOpen ? 'is-menu-open' : ''}`}
                   onClick={() => {
-                    setActiveView('editor');
-                    onSelectEntry(entry.id);
+                    if (isArchiveUnlocked) {
+                      setActiveView('editor');
+                      onSelectEntry(entry.id);
+                    } else {
+                      onOpenPasscodeModal?.(entry.id);
+                    }
                   }}
                 >
                   {/* Left: Title or Inline Input */}

@@ -15,6 +15,7 @@ import { ExportModal } from './components/ExportModal';
 import { DownloadModal } from './components/posthearts/DownloadModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileNoticeScreen } from './components/MobileNoticeScreen';
+import { PasscodeLock } from './components/PasscodeLock';
 import { 
   openPrintBookView, 
   exportConsolidatedMarkdown, 
@@ -38,6 +39,28 @@ export function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+
+  // Passcode gate for Letters Archive (Passcode: 1805)
+  const [isArchiveUnlocked, setIsArchiveUnlocked] = useState(false);
+  const [isPasscodeOpen, setIsPasscodeOpen] = useState(false);
+  const [pendingArchiveNav, setPendingArchiveNav] = useState<string | null>(null);
+
+  const handleOpenPasscodeModal = (targetEntryId?: string) => {
+    setPendingArchiveNav(targetEntryId || 'sent');
+    setIsPasscodeOpen(true);
+  };
+
+  const handleUnlockArchive = () => {
+    setIsArchiveUnlocked(true);
+    setIsPasscodeOpen(false);
+    if (pendingArchiveNav === 'sent') {
+      setActiveView('sent');
+    } else if (pendingArchiveNav) {
+      setActiveEntryId(pendingArchiveNav);
+      setActiveView('editor');
+    }
+    setPendingArchiveNav(null);
+  };
 
   const autosaveTimerRef = useRef<number | null>(null);
 
@@ -298,6 +321,9 @@ export function App() {
         activeView={activeView}
         setActiveView={setActiveView}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        isArchiveUnlocked={isArchiveUnlocked}
+        onOpenPasscodeModal={handleOpenPasscodeModal}
+        onLockArchive={() => setIsArchiveUnlocked(false)}
       />
 
       {/* 2. Main Content Area: 50% Express how you feel & 50% Letter Canvas */}
@@ -398,6 +424,17 @@ export function App() {
           onReloadEntries={loadData}
         />
       )}
+
+      {/* Passcode modal for private letters archive (Code: 1805) */}
+      <PasscodeLock
+        isOpen={isPasscodeOpen}
+        correctPasscode={settings?.passcode || '1805'}
+        onUnlock={handleUnlockArchive}
+        onClose={() => {
+          setIsPasscodeOpen(false);
+          setPendingArchiveNav(null);
+        }}
+      />
       </div>
     </>
   );

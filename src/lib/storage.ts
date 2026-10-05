@@ -1,4 +1,5 @@
 import type { Entry, AppSettings } from '../types';
+import { supabase } from './supabase';
 
 const DB_NAME = 'in_the_meantime_posthearts_db';
 const DB_VERSION = 2;
@@ -9,7 +10,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   userName: '',
   partnerSalutation: 'To you, in the meantime',
   theme: 'paper',
-  passcodeEnabled: false,
+  passcodeEnabled: true,
+  passcode: '1805',
 };
 
 const SEED_ENTRIES: Entry[] = [
@@ -128,6 +130,28 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export async function getAllEntries(): Promise<Entry[]> {
+  // First, if Supabase is connected, try to fetch from Supabase
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .order('entry_date', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        // Cache to IndexedDB in background
+        const db = await openDB();
+        const tx = db.transaction(STORE_ENTRIES, 'readwrite');
+        const store = tx.objectStore(STORE_ENTRIES);
+        data.forEach((e) => store.put(e as Entry));
+        return data as Entry[];
+      }
+    } catch (err) {
+      console.warn('Supabase fetch failed, falling back to local database:', err);
+    }
+  }
+
+  // Fallback to local IndexedDB
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_ENTRIES, 'readonly');
@@ -163,27 +187,47 @@ export async function getEntryById(id: string): Promise<Entry | null> {
 }
 
 export async function saveEntry(entry: Entry): Promise<Entry> {
+  // 1. Save locally to IndexedDB for instant UI response
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_ENTRIES, 'readwrite');
     const store = transaction.objectStore(STORE_ENTRIES);
     const request = store.put(entry);
-
-    request.onsuccess = () => resolve(entry);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-export async function deleteEntry(id: string): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_ENTRIES, 'readwrite');
-    const store = transaction.objectStore(STORE_ENTRIES);
-    const request = store.delete(id);
-
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
+
+  // 2. Sync to Supabase in background
+  if (supabase) {
+    try {
+      await supabase.from('entries').upsert(entry);
+    } catch (err) {
+      console.warn('Supabase upsert failed:', err);
+    }
+  }
+
+  return entry;
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  // 1. Delete locally from IndexedDB
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(STORE_ENTRIES, 'readwrite');
+    const store = transaction.objectStore(STORE_ENTRIES);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+
+  // 2. Sync deletion to Supabase
+  if (supabase) {
+    try {
+      await supabase.from('entries').delete().eq('id', id);
+    } catch (err) {
+      console.warn('Supabase delete failed:', err);
+    }
+  }
 }
 
 export async function getSettings(): Promise<AppSettings> {

@@ -73,6 +73,7 @@ export interface AppSettings {
   partnerSalutation?: string;
   theme: 'paper' | 'night' | 'sepia';
   passcodeEnabled: boolean;
+  passcode?: string;
   passcodeHash?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
