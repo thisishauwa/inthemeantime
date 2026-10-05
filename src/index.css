@@ -1,0 +1,396 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Damion&family=Finger+Paint&family=Geist:wght@100..900&family=Gloria+Hallelujah&family=Inria+Serif:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Mansalva&family=Marck+Script&family=Marhey:wght@300..700&family=Martian+Mono:wght@100..800&family=Schoolbell&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap');
+
+:root {
+  --primary-purple: #5C59ED;
+  --primary-purple-hover: #4E4CE6;
+  --bg-sidebar: #FFFFFF;
+  --bg-main: #FAFAFA; /* bg-backgrounds-canvas */
+  --bg-input-card: #F0F0F0; /* bg-backgrounds-default */
+  --bg-input-field: #ECEFF1; /* bg-border-input-default */
+  --text-dark: #080808; /* text-text-default */
+  --text-secondary: #595959; /* text-text-secondary */
+  --text-tertiary: #8C8C8C; /* text-text-tertiary */
+  --text-neutral: #757D87; /* text-text-neutral */
+  --border-light: #ECEFF1; /* border-border-input-default */
+  --border-default: #F5F5F5; /* border-border-default */
+  --border-on-bg: #E6E6E6; /* border-border-on-bg */
+  --border-gray-200: #E5E7EB; /* border-gray-200 */
+  --radius-stage: 24px;
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-main);
+  font-family: var(--font-inter);
+  color: var(--text-dark);
+  overflow: hidden;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  border: none;
+  outline: none;
+}
+
+/* ========================================================
+   USER ATTACHED AUTHENTIC CREASED PAPER (A4 RATIO + SLIGHT ROTATION)
+   ======================================================== */
+
+.a4-paper-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 500px; /* Increased letter size */
+  aspect-ratio: 1 / 1.414; /* Standard A4 proportions */
+  max-height: calc(100% - 70px);
+  border-radius: 12px; /* Increased border radius of the paper */
+  padding: 48px 40px 40px 40px;
+  background-image: url('/paper-bg.jpg');
+  background-size: 110% 110%; /* Fully zoomed past scan edges */
+  background-repeat: no-repeat;
+  background-position: center;
+  transform: rotate(-1.5deg); /* Slightly turned to the side */
+  transition: transform 0.25s ease;
+  overflow: hidden;
+  user-select: text;
+  box-shadow: none !important; /* Strictly no shadows */
+  border: none !important;
+}
+
+/* ========================================================
+   CELLOTAPED PHOTO DESIGN (NO SHADOWS)
+   ======================================================== */
+
+.cellotaped-photo {
+  position: relative;
+  display: inline-block;
+  margin: 16px auto 10px auto;
+  padding: 6px 6px 10px 6px;
+  background: #FFFFFF;
+  border-radius: 2px;
+  transform: rotate(-2deg);
+  max-width: 220px;
+  box-shadow: none !important; /* Strictly no shadows */
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.cellotaped-photo img {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+/* Cellotape Strips */
+.cellotape-strip-top {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(1deg);
+  width: 70px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(1.5px);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cellotape-strip-corner {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  width: 48px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transform: rotate(32deg);
+  backdrop-filter: blur(1.5px);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ========================================================
+   TOP FLOATING TOOLBAR (NO SHADOWS)
+   ======================================================== */
+
+.posthearts-topbar {
+  background: #FFFFFF;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 20;
+  box-shadow: none !important; /* Strictly no shadows */
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.topbar-primary-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--primary-purple);
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+}
+
+.topbar-primary-btn:hover {
+  background: var(--primary-purple-hover);
+}
+
+.alignment-subpill {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFFFF;
+  border-radius: 9999px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: none !important;
+  z-index: 30;
+}
+
+.alignment-subpill button {
+  padding: 6px 8px;
+  border-radius: 9999px;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alignment-subpill button.active-align {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+/* ========================================================
+   PROMPT TEXTAREA
+   ======================================================== */
+
+.prompt-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: #111827;
+  resize: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-textarea::placeholder {
+  color: #9CA3AF;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 999px;
+}
+
+/* ========================================================
+   SIDEBAR LETTER ITEMS (ZERO LAYOUT SHIFT, BUTTER SMOOTH)
+   ======================================================== */
+
+.letter-sidebar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 8px 0 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.15s ease;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+
+.letter-sidebar-row:hover {
+  background-color: #F3F4F6;
+}
+
+.letter-sidebar-row.is-selected {
+  background-color: #EFEFEF;
+}
+
+.letter-sidebar-row.is-menu-open {
+  background-color: #EFEFEF;
+}
+
+.letter-title-slot {
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.letter-action-slot {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.letter-pink-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #EC4899;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.letter-sidebar-row:hover .letter-pink-dot,
+.letter-sidebar-row.is-menu-open .letter-pink-dot {
+  opacity: 0;
+}
+
+.letter-dots-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: #6B7280;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background-color 0.12s ease, border-color 0.12s ease;
+  padding: 0;
+}
+
+.letter-sidebar-row:hover .letter-dots-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.letter-dots-btn:hover {
+  background-color: #E5E7EB;
+  color: #1F2937;
+}
+
+.letter-dots-btn.menu-open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background-color: #FFFFFF !important;
+  border-color: #0066FF !important;
+  color: #6B7280 !important;
+}
+
+.letter-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 4px;
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #E5E7EB;
+  padding: 6px;
+  min-width: 154px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+}
+
+.letter-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #1F2937;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  border: none;
+  width: 100%;
+  transition: background-color 0.1s ease;
+}
+
+.letter-dropdown-item:hover {
+  background-color: #F3F4F6;
+}
+
+.letter-dropdown-item.delete {
+  color: #1F2937;
+}
+
+.letter-dropdown-item.delete:hover {
+  background-color: #FEE2E2;
+  color: #EF4444;
+}
+
+/* ========================================================
+   TABLET & MOBILE NOTICE (DESKTOP/LAPTOP REQUIRED)
+   ======================================================== */
+
+.mobile-notice-container {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {
+  .mobile-notice-container {
+    display: flex !important;
+  }
+
+  .desktop-app-container {
+    display: none !important;
+  }
+}
+
+
