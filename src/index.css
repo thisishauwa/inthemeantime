@@ -390,4 +390,137 @@ input, textarea, select {
   }
 }
 
+/* ========================================================
+   SIDEBAR MEMORIES LIST SCROLL OPTIMIZATION
+   ======================================================== */
+
+.sidebar-memories-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #E2E8F0 transparent;
+}
+
+.sidebar-memories-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-memories-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-memories-scroll::-webkit-scrollbar-thumb {
+  background-color: #E2E8F0;
+  border-radius: 999px;
+}
+
+.sidebar-memories-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #CBD5E1;
+}
+
+/* ========================================================
+   MULTI-PAGE LETTER STACK & PAGE FLIPPING
+   ======================================================== */
+
+.paper-stack-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.a4-paper-underlay-1 {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background-image: url('/paper-bg.jpg');
+  background-size: 110% 110%;
+  background-position: center;
+  transform: rotate(1.4deg) translate(8px, 6px);
+  opacity: 0.92;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.a4-paper-underlay-2 {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background-image: url('/paper-bg.jpg');
+  background-size: 110% 110%;
+  background-position: center;
+  transform: rotate(-0.2deg) translate(14px, 10px);
+  opacity: 0.78;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes paperPageTurnForward {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.97) rotate(2deg) translateX(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-1.5deg) translateX(0);
+  }
+}
+
+@keyframes paperPageTurnBackward {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.97) rotate(-4deg) translateX(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-1.5deg) translateX(0);
+  }
+}
+
+.paper-flip-forward {
+  animation: paperPageTurnForward 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.paper-flip-backward {
+  animation: paperPageTurnBackward 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Subtle corner dog-ear page turn button */
+.paper-dogear-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-family: 'Inter', sans-serif;
+  color: #6B7280;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.paper-dogear-btn:hover {
+  background: #FFFFFF;
+  color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+
 

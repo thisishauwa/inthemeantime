@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Square, Camera, Check } from 'lucide-react';
+import { splitLetterIntoPages } from '../../lib/pagination';
 
 interface PromptInputBarProps {
   value: string;
@@ -309,6 +310,11 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
       }}>
         <span>
           Words: {wordCount} &nbsp; Characters: {charCount}
+          {splitLetterIntoPages(value).length > 1 && (
+            <span style={{ marginLeft: '10px', color: '#5C59ED', fontWeight: 600 }}>
+              • {splitLetterIntoPages(value).length} Pages
+            </span>
+          )}
         </span>
 
         <button

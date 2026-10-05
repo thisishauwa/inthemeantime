@@ -4,10 +4,14 @@ import {
   AlignCenter, 
   AlignRight, 
   ChevronDown, 
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Plus
 } from 'lucide-react';
 import { BACKDROP_COLORS, FONTS } from './stickerData';
 import { HumanVoiceNotePlayer } from './HumanVoiceNotePlayer';
+import { splitLetterIntoPages, updateLetterPage, addNewPageToLetter } from '../../lib/pagination';
 import type { Entry } from '../../types';
 
 interface PaperCanvasProps {
@@ -25,12 +29,54 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
 }) => {
   const [activePopover, setActivePopover] = useState<'color' | 'align' | 'font' | 'download' | null>(null);
   const [scale, setScale] = useState<'1x' | '2x' | '3x'>('3x');
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [flipDirection, setFlipDirection] = useState<'forward' | 'backward' | null>(null);
   const paperRef = useRef<HTMLDivElement | null>(null);
 
   const backdropColor = entry.backdrop_color || '#237A57';
   const fontFamily = entry.font_family || 'Schoolbell';
   const textAlign = entry.text_align || 'left';
   const photos = entry.photos || [];
+  const hasAttachments = photos.length > 0 || (entry.attachments || []).some(a => a.type === 'audio');
+
+  const pages = splitLetterIntoPages(entry.body, hasAttachments);
+  const pageCount = pages.length;
+
+  // Clamp current page index if pages array changes
+  useEffect(() => {
+    if (currentPageIndex >= pageCount) {
+      setCurrentPageIndex(Math.max(0, pageCount - 1));
+    }
+  }, [pageCount, currentPageIndex]);
+
+  // Reset to first page when active letter changes
+  useEffect(() => {
+    setCurrentPageIndex(0);
+  }, [entry.id]);
+
+  const handlePageTurn = (newIndex: number) => {
+    if (newIndex < 0 || newIndex >= pageCount) return;
+    setFlipDirection(newIndex > currentPageIndex ? 'forward' : 'backward');
+    setCurrentPageIndex(newIndex);
+    setTimeout(() => setFlipDirection(null), 320);
+  };
+
+  const handleAddPage = () => {
+    const { updatedBody, newPageIndex } = addNewPageToLetter(entry.body, hasAttachments);
+    onUpdateEntry({ ...entry, body: updatedBody });
+    handlePageTurn(newPageIndex);
+  };
+
+  const formatDateLabel = (iso?: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   // Close popovers on outside click
   useEffect(() => {
@@ -416,7 +462,7 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
         </div>
       </div>
 
-      {/* The Authentic A4 Creased Paper Sheet with Subtle Tilt */}
+      {/* The Authentic A4 Creased Paper Sheet Stack with Subtle Tilt */}
       <div style={{ 
         flex: 1, 
         display: 'flex', 
@@ -425,139 +471,305 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
         width: '100%', 
         overflow: 'hidden',
         paddingTop: '36px',
+        position: 'relative',
       }}>
-        <div
-          ref={paperRef}
-          className="a4-paper-sheet"
-          style={{
-            fontFamily,
-            textAlign,
-            fontSize: '1.22rem',
-            lineHeight: 1.75,
-            color: '#1F2937',
-            transform: scale === '1x' ? 'scale(0.88) rotate(-1.5deg)' : scale === '2x' ? 'scale(0.96) rotate(-1.5deg)' : 'scale(1) rotate(-1.5deg)',
-          }}
-        >
-          {/* Main letter body text directly rendered on paper */}
+        <div className="paper-stack-wrapper">
+          {/* Underlying stacked paper sheets when letter has multiple pages */}
+          {pageCount >= 3 && <div className="a4-paper-underlay-2" />}
+          {pageCount >= 2 && <div className="a4-paper-underlay-1" />}
+
           <div
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => {
-              onUpdateEntry({ ...entry, body: e.currentTarget.innerText });
-            }}
+            ref={paperRef}
+            className={`a4-paper-sheet ${
+              flipDirection === 'forward'
+                ? 'paper-flip-forward'
+                : flipDirection === 'backward'
+                ? 'paper-flip-backward'
+                : ''
+            }`}
             style={{
-              minHeight: '260px',
-              outline: 'none',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
+              fontFamily,
+              textAlign,
+              fontSize: '1.22rem',
+              lineHeight: 1.75,
+              color: '#1F2937',
+              transform:
+                scale === '1x'
+                  ? 'scale(0.88) rotate(-1.5deg)'
+                  : scale === '2x'
+                  ? 'scale(0.96) rotate(-1.5deg)'
+                  : 'scale(1) rotate(-1.5deg)',
+              zIndex: 2,
             }}
           >
-            {entry.body}
-          </div>
-
-          {/* Attached Human Voice Notes on Paper */}
-          {entry.attachments?.some(a => a.type === 'audio') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0' }}>
-              {entry.attachments.filter(a => a.type === 'audio').map(aud => (
-                <HumanVoiceNotePlayer
-                  key={aud.id}
-                  id={aud.id}
-                  url={aud.file_url}
-                  duration={aud.duration}
-                  filename={aud.filename}
-                  onDelete={() => {
-                    const filtered = (entry.attachments || []).filter(a => a.id !== aud.id);
-                    onUpdateEntry({ ...entry, attachments: filtered });
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Photos CELLOTAPED to the Paper! (Optimized multi-photo scrapbook layout) */}
-          {photos.length > 0 && (
+            {/* Header: Date and Page Number */}
             <div
-              className={`letter-scrapbook-gallery photos-count-${Math.min(photos.length, 4)}`}
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
                 alignItems: 'center',
-                gap: photos.length === 1 ? '0' : photos.length === 2 ? '14px' : '10px',
-                margin: '18px auto 8px auto',
-                width: '100%',
-                maxWidth: '460px',
+                justifyContent: 'space-between',
+                marginBottom: '16px',
+                fontSize: '0.82rem',
+                color: '#8C8C8C',
+                fontFamily: "'Inter', sans-serif",
+                letterSpacing: '0.02em',
+                userSelect: 'none',
               }}
             >
-              {photos.map((photo, idx) => {
-                const photoWidth =
-                  photos.length === 1
-                    ? '220px'
-                    : photos.length === 2
-                    ? '185px'
-                    : photos.length === 3
-                    ? '138px'
-                    : '142px';
+              <span>{formatDateLabel(entry.entry_date)}</span>
+              {pageCount > 1 && (
+                <span style={{ fontStyle: 'italic', fontWeight: 500 }}>
+                  Page {currentPageIndex + 1} of {pageCount}
+                </span>
+              )}
+            </div>
 
-                const naturalRotations = [-2.5, 2, -1.8, 2.5, -2, 1.5];
-                const rotation = photo.rotate || naturalRotations[idx % naturalRotations.length];
+            {/* Letter body text for the current page */}
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              key={`page-content-${currentPageIndex}`}
+              onBlur={(e) => {
+                const updated = updateLetterPage(
+                  entry.body,
+                  currentPageIndex,
+                  e.currentTarget.innerText,
+                  hasAttachments
+                );
+                onUpdateEntry({ ...entry, body: updated });
+              }}
+              style={{
+                minHeight: currentPageIndex === 0 ? '220px' : '360px',
+                outline: 'none',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {pages[currentPageIndex] || ''}
+            </div>
 
-                return (
-                  <div
-                    key={photo.id}
-                    className="cellotaped-photo"
-                    style={{
-                      width: photoWidth,
-                      maxWidth: '100%',
-                      margin: '4px',
-                      transform: `rotate(${rotation}deg)`,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {/* Frosted Cellotape Strips */}
-                    <div className="cellotape-strip-top" />
-                    <div className="cellotape-strip-corner" />
-
-                    <img
-                      src={photo.url}
-                      alt="Cellotaped memory"
-                      style={{
-                        width: '100%',
-                        height: photos.length === 1 ? '150px' : photos.length === 2 ? '130px' : '105px',
-                        objectFit: 'cover',
-                        display: 'block',
+            {/* Attached Human Voice Notes on Paper (Rendered on Page 1) */}
+            {currentPageIndex === 0 && entry.attachments?.some((a) => a.type === 'audio') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '8px 0' }}>
+                {entry.attachments
+                  .filter((a) => a.type === 'audio')
+                  .map((aud) => (
+                    <HumanVoiceNotePlayer
+                      key={aud.id}
+                      id={aud.id}
+                      url={aud.file_url}
+                      duration={aud.duration}
+                      onDelete={() => {
+                        const filtered = (entry.attachments || []).filter((a) => a.id !== aud.id);
+                        onUpdateEntry({ ...entry, attachments: filtered });
                       }}
                     />
+                  ))}
+              </div>
+            )}
 
-                    <button
-                      onClick={() => handleRemovePhoto(photo.id)}
+            {/* Photos CELLOTAPED to the Paper! (Rendered on Page 1) */}
+            {currentPageIndex === 0 && photos.length > 0 && (
+              <div
+                className={`letter-scrapbook-gallery photos-count-${Math.min(photos.length, 4)}`}
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: photos.length === 1 ? '0' : photos.length === 2 ? '14px' : '10px',
+                  margin: '18px auto 8px auto',
+                  width: '100%',
+                  maxWidth: '460px',
+                }}
+              >
+                {photos.map((photo, idx) => {
+                  const photoWidth =
+                    photos.length === 1
+                      ? '220px'
+                      : photos.length === 2
+                      ? '185px'
+                      : photos.length === 3
+                      ? '138px'
+                      : '142px';
+
+                  const naturalRotations = [-2.5, 2, -1.8, 2.5, -2, 1.5];
+                  const rotation = photo.rotate || naturalRotations[idx % naturalRotations.length];
+
+                  return (
+                    <div
+                      key={photo.id}
+                      className="cellotaped-photo"
                       style={{
-                        position: 'absolute',
-                        bottom: '6px',
-                        right: '6px',
-                        background: 'rgba(0,0,0,0.6)',
-                        color: '#FFF',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 20,
-                        cursor: 'pointer',
-                        border: 'none',
+                        width: photoWidth,
+                        maxWidth: '100%',
+                        margin: '4px',
+                        transform: `rotate(${rotation}deg)`,
+                        flexShrink: 0,
                       }}
-                      title="Remove photo"
                     >
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <div className="cellotape-strip-top" />
+                      <div className="cellotape-strip-corner" />
+
+                      <img
+                        src={photo.url}
+                        alt="Cellotaped memory"
+                        style={{
+                          width: '100%',
+                          height: photos.length === 1 ? '150px' : photos.length === 2 ? '130px' : '105px',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+
+                      <button
+                        onClick={() => handleRemovePhoto(photo.id)}
+                        style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          right: '6px',
+                          background: 'rgba(0,0,0,0.6)',
+                          color: '#FFF',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 20,
+                          cursor: 'pointer',
+                          border: 'none',
+                        }}
+                        title="Remove photo"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Tactile Dog-Ear Page Turn Button on bottom right corner */}
+            {currentPageIndex < pageCount - 1 ? (
+              <button
+                type="button"
+                className="paper-dogear-btn"
+                onClick={() => handlePageTurn(currentPageIndex + 1)}
+                title="Turn to next page"
+              >
+                <span>Page {currentPageIndex + 2}</span>
+                <ChevronRight size={12} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="paper-dogear-btn"
+                onClick={handleAddPage}
+                title="Add another sheet of stationery"
+              >
+                <Plus size={11} />
+                <span>Add page</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Floating Pagination Pill (visible when multiple pages exist) */}
+      {pageCount > 1 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '18px',
+            zIndex: 35,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(10px)',
+            padding: '7px 18px',
+            borderRadius: '999px',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.12)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
+            userSelect: 'none',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => handlePageTurn(currentPageIndex - 1)}
+            disabled={currentPageIndex === 0}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: currentPageIndex === 0 ? '#CBD5E1' : '#374151',
+              cursor: currentPageIndex === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '2px',
+              transition: 'color 0.1s ease',
+            }}
+            title="Previous page"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <span
+            style={{
+              fontSize: '0.84rem',
+              fontWeight: 600,
+              color: '#1F2937',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            Page {currentPageIndex + 1} of {pageCount}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => handlePageTurn(currentPageIndex + 1)}
+            disabled={currentPageIndex === pageCount - 1}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: currentPageIndex === pageCount - 1 ? '#CBD5E1' : '#374151',
+              cursor: currentPageIndex === pageCount - 1 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '2px',
+              transition: 'color 0.1s ease',
+            }}
+            title="Next page"
+          >
+            <ChevronRight size={16} />
+          </button>
+
+          <div style={{ width: '1px', height: '14px', background: '#E5E7EB', margin: '0 2px' }} />
+
+          <button
+            type="button"
+            onClick={handleAddPage}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#4B5563',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              padding: '2px 4px',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#111827')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#4B5563')}
+            title="Add a new sheet of stationery"
+          >
+            <Plus size={12} />
+            <span>New page</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

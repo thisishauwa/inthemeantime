@@ -1,6 +1,7 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
+import { splitLetterIntoPages } from './pagination';
 import type { Entry } from '../types';
 
 export interface VisualExportProgress {
@@ -23,11 +24,19 @@ function formatDateLabel(isoString: string): string {
   }
 }
 
-// Create an offscreen DOM node that mirrors the on-screen letter stage exactly
-function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivElement {
+// Create an offscreen DOM node that mirrors the on-screen letter stage exactly (supports multi-page stationery)
+function createOffscreenStage(
+  entry: Entry,
+  fallbackColor = '#8B4513',
+  pageIndex: number = 0,
+  totalPages: number = 1
+): HTMLDivElement {
   const backdropColor = entry.backdrop_color || fallbackColor;
   const fontFamily = entry.font_family || 'Newsreader, Georgia, serif';
   const textAlign = entry.text_align || 'left';
+  const hasAttachments = (entry.photos && entry.photos.length > 0) || (entry.attachments || []).some(a => a.type === 'audio');
+  const pages = splitLetterIntoPages(entry.body || '', hasAttachments);
+  const pageText = pages[pageIndex] || '';
 
   // Outer Stage Container (A4 portrait proportion: 794px x 1123px at 96 DPI, scale 2 gives 1588x2246 high-res)
   const container = document.createElement('div');
@@ -45,6 +54,20 @@ function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivE
   container.style.boxSizing = 'border-box';
   container.style.overflow = 'hidden';
   container.style.zIndex = '-1000';
+
+  // Underlying paper sheet stack if multiple pages exist
+  if (totalPages >= 2) {
+    const underlay = document.createElement('div');
+    underlay.style.position = 'absolute';
+    underlay.style.width = '520px';
+    underlay.style.aspectRatio = '1 / 1.414';
+    underlay.style.borderRadius = '12px';
+    underlay.style.backgroundImage = "url('/paper-bg.jpg')";
+    underlay.style.backgroundSize = '110% 110%';
+    underlay.style.transform = 'rotate(1.2deg) translate(6px, 6px)';
+    underlay.style.opacity = '0.9';
+    container.appendChild(underlay);
+  }
 
   // Inner A4 Creased Paper Sheet with authentic texture and tilt
   const paper = document.createElement('div');
@@ -74,20 +97,25 @@ function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivE
   dateHeader.style.marginBottom = '20px';
   dateHeader.style.fontFamily = "'Inter', sans-serif";
   dateHeader.style.letterSpacing = '0.02em';
-  dateHeader.textContent = formatDateLabel(entry.entry_date);
+  dateHeader.style.display = 'flex';
+  dateHeader.style.justifyContent = 'space-between';
+  dateHeader.innerHTML = `
+    <span>${formatDateLabel(entry.entry_date)}</span>
+    ${totalPages > 1 ? `<span style="font-style: italic;">Page ${pageIndex + 1} of ${totalPages}</span>` : ''}
+  `;
   paper.appendChild(dateHeader);
 
   // Letter Body
   const bodyText = document.createElement('div');
   bodyText.style.whiteSpace = 'pre-wrap';
   bodyText.style.wordBreak = 'break-word';
-  bodyText.style.minHeight = '240px';
-  bodyText.textContent = entry.body || '';
+  bodyText.style.minHeight = pageIndex === 0 ? '240px' : '360px';
+  bodyText.textContent = pageText;
   paper.appendChild(bodyText);
 
-  // Attached Human Voice Memos
+  // Attached Human Voice Memos (Rendered on Page 1)
   const audioAttachments = (entry.attachments || []).filter(a => a.type === 'audio');
-  if (audioAttachments.length > 0) {
+  if (pageIndex === 0 && audioAttachments.length > 0) {
     audioAttachments.forEach((aud) => {
       const memoWrapper = document.createElement('div');
       memoWrapper.style.position = 'relative';
@@ -156,8 +184,8 @@ function createOffscreenStage(entry: Entry, fallbackColor = '#8B4513'): HTMLDivE
     });
   }
 
-  // Attached Cellotaped Photos (Optimized multi-photo scrapbook layout)
-  if (entry.photos && entry.photos.length > 0) {
+  // Attached Cellotaped Photos (Rendered on Page 1)
+  if (pageIndex === 0 && entry.photos && entry.photos.length > 0) {
     const gallery = document.createElement('div');
     gallery.style.display = 'flex';
     gallery.style.flexWrap = 'wrap';
@@ -247,7 +275,7 @@ async function waitForElementAssets(element: HTMLElement): Promise<void> {
   await new Promise((r) => setTimeout(r, 120));
 }
 
-// 1. Export as Visual PDF Booklet with full colored canvas and authentic paper
+// 1. Export as Visual PDF Booklet with full colored canvas and authentic paper (supports multi-page letters)
 export async function downloadVisualPDF(
   entries: Entry[],
   onProgress?: (progress: VisualExportProgress) => void
@@ -260,17 +288,27 @@ export async function downloadVisualPDF(
     format: 'a4',
   });
 
-  const total = entries.length;
+  // Flatten all letter sheets
+  const tasks: { entry: Entry; pageIndex: number; totalPages: number }[] = [];
+  entries.forEach((entry) => {
+    const hasAtt = (entry.photos && entry.photos.length > 0) || (entry.attachments || []).some(a => a.type === 'audio');
+    const pgs = splitLetterIntoPages(entry.body || '', hasAtt);
+    for (let p = 0; p < pgs.length; p++) {
+      tasks.push({ entry, pageIndex: p, totalPages: pgs.length });
+    }
+  });
+
+  const total = tasks.length;
 
   for (let i = 0; i < total; i++) {
-    const entry = entries[i];
+    const task = tasks[i];
     onProgress?.({
       current: i + 1,
       total,
-      status: `Rendering letter ${i + 1} of ${total}: "${entry.title || 'Untitled'}"...`,
+      status: `Rendering sheet ${i + 1} of ${total}: "${task.entry.title || 'Untitled'}"${task.totalPages > 1 ? ` (Page ${task.pageIndex + 1}/${task.totalPages})` : ''}...`,
     });
 
-    const stage = createOffscreenStage(entry);
+    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex, task.totalPages);
     document.body.appendChild(stage);
 
     try {
@@ -310,17 +348,27 @@ export async function downloadVisualImagesZip(
 
   const zip = new JSZip();
   const folder = zip.folder('letters_visual') || zip;
-  const total = entries.length;
+
+  const tasks: { entry: Entry; pageIndex: number; totalPages: number }[] = [];
+  entries.forEach((entry) => {
+    const hasAtt = (entry.photos && entry.photos.length > 0) || (entry.attachments || []).some(a => a.type === 'audio');
+    const pgs = splitLetterIntoPages(entry.body || '', hasAtt);
+    for (let p = 0; p < pgs.length; p++) {
+      tasks.push({ entry, pageIndex: p, totalPages: pgs.length });
+    }
+  });
+
+  const total = tasks.length;
 
   for (let i = 0; i < total; i++) {
-    const entry = entries[i];
+    const task = tasks[i];
     onProgress?.({
       current: i + 1,
       total,
       status: `Rendering image ${i + 1} of ${total}...`,
     });
 
-    const stage = createOffscreenStage(entry);
+    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex, task.totalPages);
     document.body.appendChild(stage);
 
     try {
@@ -337,12 +385,13 @@ export async function downloadVisualImagesZip(
       const dataUrl = canvas.toDataURL('image/png');
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
 
-      const dateStr = entry.entry_date.slice(0, 10);
-      const sanitized = (entry.title || 'letter')
+      const dateStr = task.entry.entry_date.slice(0, 10);
+      const sanitized = (task.entry.title || 'letter')
         .toLowerCase()
         .replace(/[^a-z0-9]/gi, '_')
         .slice(0, 25);
-      const filename = `${String(i + 1).padStart(2, '0')}_${dateStr}_${sanitized}.png`;
+      const pageSuffix = task.totalPages > 1 ? `_p${task.pageIndex + 1}` : '';
+      const filename = `${String(i + 1).padStart(2, '0')}_${dateStr}_${sanitized}${pageSuffix}.png`;
 
       folder.file(filename, base64Data, { base64: true });
     } finally {
@@ -362,7 +411,7 @@ export async function downloadVisualImagesZip(
   URL.revokeObjectURL(url);
 }
 
-// 3. Open Print Window with Exact Colored Stage and Authentic Paper
+// 3. Open Print Window with Exact Colored Stage and Authentic Paper (supports multi-page letters)
 export function openVisualPrintBook(entries: Entry[]): void {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
@@ -373,70 +422,84 @@ export function openVisualPrintBook(entries: Entry[]): void {
       const font = entry.font_family || 'Newsreader, Georgia, serif';
       const align = entry.text_align || 'left';
       const dateLabel = formatDateLabel(entry.entry_date);
+      const hasAtt = (entry.photos && entry.photos.length > 0) || (entry.attachments || []).some(a => a.type === 'audio');
+      const letterPages = splitLetterIntoPages(entry.body || '', hasAtt);
+      const totalPages = letterPages.length;
 
-      const photosCount = (entry.photos || []).length;
-      let photoWidth = '220px';
-      let imgHeight = '150px';
-      if (photosCount === 2) {
-        photoWidth = '185px';
-        imgHeight = '130px';
-      } else if (photosCount === 3) {
-        photoWidth = '135px';
-        imgHeight = '105px';
-      } else if (photosCount >= 4) {
-        photoWidth = '145px';
-        imgHeight = '105px';
-      }
+      return letterPages.map((pageText, pIdx) => {
+        const isFirstPage = pIdx === 0;
 
-      const photosHtml = photosCount > 0 ? `
-        <div class="letter-scrapbook-gallery">
-          ${entry.photos!.map((p, idx) => {
-            const rot = p.rotate ?? (idx % 2 === 0 ? -1.5 : 1.8);
+        const photosCount = isFirstPage ? (entry.photos || []).length : 0;
+        let photoWidth = '220px';
+        let imgHeight = '150px';
+        if (photosCount === 2) {
+          photoWidth = '185px';
+          imgHeight = '130px';
+        } else if (photosCount === 3) {
+          photoWidth = '135px';
+          imgHeight = '105px';
+        } else if (photosCount >= 4) {
+          photoWidth = '145px';
+          imgHeight = '105px';
+        }
+
+        const photosHtml = photosCount > 0 ? `
+          <div class="letter-scrapbook-gallery">
+            ${entry.photos!.map((p, idx) => {
+              const rot = p.rotate ?? (idx % 2 === 0 ? -1.5 : 1.8);
+              return `
+                <div class="cellotaped-photo" style="width: ${photoWidth}; transform: rotate(${rot}deg);">
+                  <div class="cellotape-top"></div>
+                  <img src="${p.url}" style="height: ${imgHeight};" />
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : '';
+
+        const audioMemosHtml = isFirstPage ? (entry.attachments || [])
+          .filter(a => a.type === 'audio')
+          .map(aud => {
+            const secs = aud.duration || 0;
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            const dur = `${m}:${s < 10 ? '0' : ''}${s}`;
             return `
-              <div class="cellotaped-photo" style="width: ${photoWidth}; transform: rotate(${rot}deg);">
-                <div class="cellotape-top"></div>
-                <img src="${p.url}" style="height: ${imgHeight};" />
+              <div class="human-voice-memo">
+                <div class="cellotape-memo-top"></div>
+                <div class="voice-memo-play-circle">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="#FFFFFF"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </div>
+                <div class="voice-memo-acoustic-bars">
+                  <span style="height: 6px;"></span><span style="height: 12px;"></span>
+                  <span style="height: 18px;"></span><span style="height: 14px;"></span>
+                  <span style="height: 20px;"></span><span style="height: 10px;"></span>
+                  <span style="height: 17px;"></span><span style="height: 19px;"></span>
+                  <span style="height: 14px;"></span><span style="height: 8px;"></span>
+                </div>
+                <div class="voice-memo-label">${dur} • voice memo</div>
               </div>
             `;
-          }).join('')}
-        </div>
-      ` : '';
+          }).join('') : '';
 
-      const audioMemosHtml = (entry.attachments || [])
-        .filter(a => a.type === 'audio')
-        .map(aud => {
-          const secs = aud.duration || 0;
-          const m = Math.floor(secs / 60);
-          const s = secs % 60;
-          const dur = `${m}:${s < 10 ? '0' : ''}${s}`;
-          return `
-            <div class="human-voice-memo">
-              <div class="cellotape-memo-top"></div>
-              <div class="voice-memo-play-circle">
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="#FFFFFF"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </div>
-              <div class="voice-memo-acoustic-bars">
-                <span style="height: 6px;"></span><span style="height: 12px;"></span>
-                <span style="height: 18px;"></span><span style="height: 14px;"></span>
-                <span style="height: 20px;"></span><span style="height: 10px;"></span>
-                <span style="height: 17px;"></span><span style="height: 19px;"></span>
-                <span style="height: 14px;"></span><span style="height: 8px;"></span>
-              </div>
-              <div class="voice-memo-label">${dur} • voice memo</div>
+        const pageHeader = totalPages > 1
+          ? `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" class="date-header">
+               <span>${dateLabel}</span>
+               <span style="font-style: italic;">Page ${pIdx + 1} of ${totalPages}</span>
+             </div>`
+          : `<div class="date-header">${dateLabel}</div>`;
+
+        return `
+          <div class="stage-page" style="background-color: ${backdrop};">
+            <div class="paper-sheet" style="font-family: ${font}; text-align: ${align};">
+              ${pageHeader}
+              <div class="letter-body">${(pageText || '').replace(/\n/g, '<br/>')}</div>
+              ${audioMemosHtml}
+              ${photosHtml}
             </div>
-          `;
-        }).join('');
-
-      return `
-      <div class="stage-page" style="background-color: ${backdrop};">
-        <div class="paper-sheet" style="font-family: ${font}; text-align: ${align};">
-          <div class="date-header">${dateLabel}</div>
-          <div class="letter-body">${(entry.body || '').replace(/\n/g, '<br/>')}</div>
-          ${audioMemosHtml}
-          ${photosHtml}
-        </div>
-      </div>
-    `;
+          </div>
+        `;
+      }).join('');
     })
     .join('');
 

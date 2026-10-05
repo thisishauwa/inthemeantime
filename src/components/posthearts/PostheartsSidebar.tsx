@@ -177,8 +177,8 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
         </button>
       </div>
 
-      {/* Letters List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
+      {/* Letters List (Optimized for plenty of memories) */}
+      <div className="sidebar-memories-scroll">
         <div style={{
           fontSize: '0.82rem',
           color: '#6B7280',
