@@ -316,7 +316,7 @@ export function openPrintBookView(entries: Entry[], onlyForYou = false, salutati
       <div class="entry-card ${i > 0 && i % 4 === 0 ? 'page-break' : ''}">
         <div class="entry-date">${formatDate(entry.entry_date)}</div>
         ${entry.title ? `<h2 class="entry-title">${escapeHtml(entry.title)}</h2>` : ''}
-        <div class="entry-body">${escapeHtml(entry.body)}</div>
+        <div class="entry-body">${escapeHtml(entry.body.replace(/\n*---+page---+\n*/g, '\n\n'))}</div>
         
         ${entry.attachments && entry.attachments.length > 0 ? entry.attachments.map(att => {
           if (att.type === 'image') {

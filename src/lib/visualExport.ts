@@ -28,8 +28,7 @@ function formatDateLabel(isoString: string): string {
 function createOffscreenStage(
   entry: Entry,
   fallbackColor = '#8B4513',
-  pageIndex: number = 0,
-  totalPages: number = 1
+  pageIndex: number = 0
 ): HTMLDivElement {
   const backdropColor = entry.backdrop_color || fallbackColor;
   const fontFamily = entry.font_family || 'Newsreader, Georgia, serif';
@@ -55,20 +54,6 @@ function createOffscreenStage(
   container.style.overflow = 'hidden';
   container.style.zIndex = '-1000';
 
-  // Underlying paper sheet stack if multiple pages exist
-  if (totalPages >= 2) {
-    const underlay = document.createElement('div');
-    underlay.style.position = 'absolute';
-    underlay.style.width = '520px';
-    underlay.style.aspectRatio = '1 / 1.414';
-    underlay.style.borderRadius = '12px';
-    underlay.style.backgroundImage = "url('/paper-bg.jpg')";
-    underlay.style.backgroundSize = '110% 110%';
-    underlay.style.transform = 'rotate(1.2deg) translate(6px, 6px)';
-    underlay.style.opacity = '0.9';
-    container.appendChild(underlay);
-  }
-
   // Inner A4 Creased Paper Sheet with authentic texture and tilt
   const paper = document.createElement('div');
   paper.style.position = 'relative';
@@ -90,7 +75,8 @@ function createOffscreenStage(
   paper.style.lineHeight = '1.75';
   paper.style.color = '#1F2937';
 
-  // Date Header on Paper
+  // Date Header on Paper (displays continuation indicator on subsequent sheets)
+  const isContinuation = pageIndex > 0;
   const dateHeader = document.createElement('div');
   dateHeader.style.fontSize = '0.85rem';
   dateHeader.style.color = '#8C8C8C';
@@ -101,15 +87,17 @@ function createOffscreenStage(
   dateHeader.style.justifyContent = 'space-between';
   dateHeader.innerHTML = `
     <span>${formatDateLabel(entry.entry_date)}</span>
-    ${totalPages > 1 ? `<span style="font-style: italic;">Page ${pageIndex + 1} of ${totalPages}</span>` : ''}
+    ${isContinuation ? `<span style="font-style: italic; color: #8C8C8C; font-size: 0.85rem;">(continued)</span>` : ''}
   `;
   paper.appendChild(dateHeader);
 
-  // Letter Body
+  // Letter Body (constrained so text never bleeds out of the stationery)
   const bodyText = document.createElement('div');
   bodyText.style.whiteSpace = 'pre-wrap';
   bodyText.style.wordBreak = 'break-word';
-  bodyText.style.minHeight = pageIndex === 0 ? '240px' : '360px';
+  bodyText.style.minHeight = pageIndex === 0 ? '200px' : '320px';
+  bodyText.style.maxHeight = pageIndex === 0 && hasAttachments ? '280px' : '580px';
+  bodyText.style.overflow = 'hidden';
   bodyText.textContent = pageText;
   paper.appendChild(bodyText);
 
@@ -308,7 +296,7 @@ export async function downloadVisualPDF(
       status: `Rendering sheet ${i + 1} of ${total}: "${task.entry.title || 'Untitled'}"${task.totalPages > 1 ? ` (Page ${task.pageIndex + 1}/${task.totalPages})` : ''}...`,
     });
 
-    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex, task.totalPages);
+    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex);
     document.body.appendChild(stage);
 
     try {
@@ -368,7 +356,7 @@ export async function downloadVisualImagesZip(
       status: `Rendering image ${i + 1} of ${total}...`,
     });
 
-    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex, task.totalPages);
+    const stage = createOffscreenStage(task.entry, '#8B4513', task.pageIndex);
     document.body.appendChild(stage);
 
     try {
@@ -424,7 +412,6 @@ export function openVisualPrintBook(entries: Entry[]): void {
       const dateLabel = formatDateLabel(entry.entry_date);
       const hasAtt = (entry.photos && entry.photos.length > 0) || (entry.attachments || []).some(a => a.type === 'audio');
       const letterPages = splitLetterIntoPages(entry.body || '', hasAtt);
-      const totalPages = letterPages.length;
 
       return letterPages.map((pageText, pIdx) => {
         const isFirstPage = pIdx === 0;
@@ -482,12 +469,13 @@ export function openVisualPrintBook(entries: Entry[]): void {
             `;
           }).join('') : '';
 
-        const pageHeader = totalPages > 1
-          ? `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" class="date-header">
-               <span>${dateLabel}</span>
-               <span style="font-style: italic;">Page ${pIdx + 1} of ${totalPages}</span>
-             </div>`
-          : `<div class="date-header">${dateLabel}</div>`;
+        const isContinuation = pIdx > 0;
+        const pageHeader = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" class="date-header">
+            <span>${dateLabel}</span>
+            ${isContinuation ? `<span style="font-style: italic; color: #8C8C8C; font-size: 0.85rem;">(continued)</span>` : ''}
+          </div>
+        `;
 
         return `
           <div class="stage-page" style="background-color: ${backdrop};">

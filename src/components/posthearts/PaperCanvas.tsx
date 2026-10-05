@@ -28,7 +28,7 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
   onOpenDownloadModal,
 }) => {
   const [activePopover, setActivePopover] = useState<'color' | 'align' | 'font' | 'download' | null>(null);
-  const [scale, setScale] = useState<'1x' | '2x' | '3x'>('3x');
+  const [scale, setScale] = useState<'1x' | '2x' | '3x'>('2x');
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [flipDirection, setFlipDirection] = useState<'forward' | 'backward' | null>(null);
   const paperRef = useRef<HTMLDivElement | null>(null);
@@ -469,11 +469,24 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
         alignItems: 'center', 
         justifyContent: 'center', 
         width: '100%', 
+        height: '100%',
         overflow: 'hidden',
-        paddingTop: '36px',
+        padding: '52px 14px 48px 14px',
         position: 'relative',
+        boxSizing: 'border-box',
       }}>
-        <div className="paper-stack-wrapper">
+        <div
+          className="paper-stack-wrapper"
+          style={{
+            transform:
+              scale === '1x'
+                ? 'scale(0.82)'
+                : scale === '2x'
+                ? 'scale(0.92)'
+                : 'scale(1)',
+            transformOrigin: 'center center',
+          }}
+        >
           {/* Underlying stacked paper sheets when letter has multiple pages */}
           {pageCount >= 3 && <div className="a4-paper-underlay-2" />}
           {pageCount >= 2 && <div className="a4-paper-underlay-1" />}
@@ -490,15 +503,10 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
             style={{
               fontFamily,
               textAlign,
-              fontSize: '1.22rem',
-              lineHeight: 1.75,
+              fontSize: scale === '1x' ? '1.05rem' : scale === '2x' ? '1.14rem' : '1.22rem',
+              lineHeight: 1.68,
               color: '#1F2937',
-              transform:
-                scale === '1x'
-                  ? 'scale(0.88) rotate(-1.5deg)'
-                  : scale === '2x'
-                  ? 'scale(0.96) rotate(-1.5deg)'
-                  : 'scale(1) rotate(-1.5deg)',
+              transform: 'rotate(-1.5deg)',
               zIndex: 2,
             }}
           >
@@ -517,9 +525,9 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
               }}
             >
               <span>{formatDateLabel(entry.entry_date)}</span>
-              {pageCount > 1 && (
-                <span style={{ fontStyle: 'italic', fontWeight: 500 }}>
-                  Page {currentPageIndex + 1} of {pageCount}
+              {currentPageIndex > 0 && (
+                <span style={{ fontStyle: 'italic', fontWeight: 400, color: '#8C8C8C', fontSize: '0.8rem' }}>
+                  (continued)
                 </span>
               )}
             </div>
@@ -539,10 +547,12 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                 onUpdateEntry({ ...entry, body: updated });
               }}
               style={{
-                minHeight: currentPageIndex === 0 ? '220px' : '360px',
+                minHeight: currentPageIndex === 0 ? '160px' : '280px',
+                maxHeight: currentPageIndex === 0 && hasAttachments ? '210px' : '440px',
                 outline: 'none',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
+                overflow: 'hidden',
               }}
             >
               {pages[currentPageIndex] || ''}
@@ -648,29 +658,6 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                   );
                 })}
               </div>
-            )}
-
-            {/* Tactile Dog-Ear Page Turn Button on bottom right corner */}
-            {currentPageIndex < pageCount - 1 ? (
-              <button
-                type="button"
-                className="paper-dogear-btn"
-                onClick={() => handlePageTurn(currentPageIndex + 1)}
-                title="Turn to next page"
-              >
-                <span>Page {currentPageIndex + 2}</span>
-                <ChevronRight size={12} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="paper-dogear-btn"
-                onClick={handleAddPage}
-                title="Add another sheet of stationery"
-              >
-                <Plus size={11} />
-                <span>Add page</span>
-              </button>
             )}
           </div>
         </div>
