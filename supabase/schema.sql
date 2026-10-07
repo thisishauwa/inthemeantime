@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS public.entries (
     stickers JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
+-- Ensure new columns exist even if public.entries was created earlier
+ALTER TABLE public.entries ADD COLUMN IF NOT EXISTS for_them BOOLEAN NOT NULL DEFAULT false;
+
 -- 2. Create App Settings Table
 CREATE TABLE IF NOT EXISTS public.settings (
     id TEXT PRIMARY KEY DEFAULT 'app_settings',
