@@ -7,13 +7,13 @@
 export const PAGE_BREAK_DELIMITER = '\n\n---page---\n\n';
 
 // Average characters per line on paper at standard font size (~1.14rem)
-export const LINE_CHAR_BUDGET = 42;
+export const LINE_CHAR_BUDGET = 50;
 
-// Strict visual lines allowed per physical stationery sheet
-// Page 1 with attachments (photos / voice memo): max 6 lines so memories breathe
-export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 6;
-// Clean stationery page (no attachments, or Page 2+): 12 lines with generous 80px+ bottom paper margins
-export const MAX_LINES_CLEAN_PAGE = 12;
+// Default visual line capacity per physical stationery sheet
+// Page 1 with attachments (photos / voice memo): comfortable 10 lines
+export const MAX_LINES_PAGE_1_WITH_ATTACHMENTS = 10;
+// Clean stationery page (no attachments, or Page 2+): 16 lines filling ~88% of the paper
+export const MAX_LINES_CLEAN_PAGE = 16;
 
 /**
  * Calculates visual lines consumed by a string:
@@ -85,50 +85,65 @@ function splitLongParagraph(paragraph: string, maxLines: number): string[] {
 
 /**
  * Splits a full letter body into discrete physical stationery pages.
- * Enforces strict visual line limits per page so text NEVER bleeds out of the letter.
+ * Fills each page to genuine capacity so letters never prematurely break halfway down the paper.
  */
-export function splitLetterIntoPages(fullBody: string, hasAttachments: boolean = false): string[] {
+export function splitLetterIntoPages(
+  fullBody: string,
+  hasAttachments: boolean = false,
+  maxCleanLines: number = MAX_LINES_CLEAN_PAGE,
+  maxAttachmentLines: number = MAX_LINES_PAGE_1_WITH_ATTACHMENTS
+): string[] {
   if (!fullBody || fullBody.trim() === '') {
     return [''];
   }
 
-  // 1. If explicit page breaks exist, respect them while ensuring none exceeds max lines
+  // 1. If explicit manual page breaks exist (from deliberate '+ New page' actions)
   if (fullBody.includes('---page---')) {
-    const rawPages = fullBody.split(/---+page---+/g).map(p => p.trim());
-    const finalPages: string[] = [];
+    const rawPages = fullBody.split(/---+page---+/g);
+    // If any page is completely empty, it was deliberately created with '+ New page'
+    const hasDeliberateBlankPage = rawPages.some(p => p.trim() === '');
+    if (hasDeliberateBlankPage) {
+      const finalPages: string[] = [];
+      rawPages.forEach((raw, idx) => {
+        const isFirst = idx === 0 && finalPages.length === 0;
+        const budget = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
+        if (countVisualLines(raw) <= budget) {
+          finalPages.push(raw.trim());
+        } else {
+          const subPages = paginateContinuousText(raw.trim(), isFirst, hasAttachments, maxCleanLines, maxAttachmentLines);
+          finalPages.push(...subPages);
+        }
+      });
+      return finalPages.length > 0 ? finalPages : [''];
+    }
 
-    rawPages.forEach((raw, idx) => {
-      const isFirst = idx === 0 && finalPages.length === 0;
-      const budget = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
-
-      if (countVisualLines(raw) <= budget) {
-        finalPages.push(raw);
-      } else {
-        // Subdivide overflowing explicit page
-        const subPages = paginateContinuousText(raw, isFirst, hasAttachments);
-        finalPages.push(...subPages);
-      }
-    });
-
-    return finalPages.length > 0 ? finalPages : [''];
+    // Otherwise, recombine previously auto-paginated chunks so writing fills each sheet fully
+    const unified = rawPages.map(p => p.trim()).filter(Boolean).join('\n\n');
+    return paginateContinuousText(unified, true, hasAttachments, maxCleanLines, maxAttachmentLines);
   }
 
   // 2. Natural automatic line-budget pagination
-  return paginateContinuousText(fullBody, true, hasAttachments);
+  return paginateContinuousText(fullBody, true, hasAttachments, maxCleanLines, maxAttachmentLines);
 }
 
 /**
  * Paginates continuous text into pages respecting line limits.
- * Letters now fill pages naturally (like genuine stationery) instead of breaking prematurely.
+ * Letters now fill the entire stationery sheet before moving to a new page.
  */
-function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAttachments: boolean): string[] {
+function paginateContinuousText(
+  text: string,
+  startsAsFirstPage: boolean,
+  hasAttachments: boolean,
+  maxCleanLines: number = MAX_LINES_CLEAN_PAGE,
+  maxAttachmentLines: number = MAX_LINES_PAGE_1_WITH_ATTACHMENTS
+): string[] {
   const paragraphs = text.split(/\n\n+/);
   const pages: string[] = [];
   let currentPage = '';
   let isFirst = startsAsFirstPage;
 
   for (const para of paragraphs) {
-    const maxLines = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+    const maxLines = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
 
     // 1. If entire paragraph fits in remaining space of current page, append it
     const testWithPara = currentPage ? currentPage + '\n\n' + para : para;
@@ -137,16 +152,15 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
       continue;
     }
 
-    // 2. If current page is already well-filled (>= 65% capacity),
+    // 2. If current page is already well-filled (within 2 lines of maxLines),
     // start this paragraph cleanly on the next page
     const currentLines = countVisualLines(currentPage);
-    const minFillThreshold = Math.floor(maxLines * 0.65);
-    if (currentPage && currentLines >= minFillThreshold) {
+    if (currentPage && currentLines >= (maxLines - 2)) {
       pages.push(currentPage);
       currentPage = '';
       isFirst = false;
 
-      const nextMaxLines = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+      const nextMaxLines = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
       if (countVisualLines(para) <= nextMaxLines) {
         currentPage = para;
       } else {
@@ -163,14 +177,14 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
       continue;
     }
 
-    // 3. Otherwise, current page still has plenty of space.
-    // Break the paragraph across pages so the page isn't left awkwardly empty.
+    // 3. Otherwise, current page still has significant space remaining.
+    // Fill the remaining lines of this page with sentences from `para` so the sheet fills completely!
     const sentences = para.match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g) || [para];
     let sentenceIdx = 0;
     while (sentenceIdx < sentences.length) {
       const sentence = sentences[sentenceIdx].trim();
       const testCandidate = currentPage ? currentPage + (currentPage.endsWith('\n') ? '' : ' ') + sentence : sentence;
-      const targetMax = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+      const targetMax = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
 
       if (countVisualLines(testCandidate) <= targetMax) {
         currentPage = testCandidate;
@@ -182,7 +196,7 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
           isFirst = false;
         }
         const remainingText = sentences.slice(sentenceIdx).join(' ').trim();
-        const nextTargetMax = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+        const nextTargetMax = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
         if (countVisualLines(remainingText) <= nextTargetMax) {
           currentPage = remainingText;
         } else {
@@ -210,27 +224,28 @@ function paginateContinuousText(text: string, startsAsFirstPage: boolean, hasAtt
 
 /**
  * Updates a specific page in a multi-page letter, joining them back together.
- * If edited content exceeds max lines for that page, excess flows to next page.
  */
 export function updateLetterPage(
   fullBody: string,
   pageIndex: number,
   newPageContent: string,
-  hasAttachments: boolean = false
+  hasAttachments: boolean = false,
+  maxCleanLines: number = MAX_LINES_CLEAN_PAGE,
+  maxAttachmentLines: number = MAX_LINES_PAGE_1_WITH_ATTACHMENTS
 ): string {
-  const pages = splitLetterIntoPages(fullBody, hasAttachments);
+  const pages = splitLetterIntoPages(fullBody, hasAttachments, maxCleanLines, maxAttachmentLines);
   while (pages.length <= pageIndex) {
     pages.push('');
   }
 
   const isFirst = pageIndex === 0;
-  const maxLines = isFirst && hasAttachments ? MAX_LINES_PAGE_1_WITH_ATTACHMENTS : MAX_LINES_CLEAN_PAGE;
+  const maxLines = isFirst && hasAttachments ? maxAttachmentLines : maxCleanLines;
 
   if (countVisualLines(newPageContent) <= maxLines) {
     pages[pageIndex] = newPageContent;
   } else {
     // Content overflowed pageIndex! Split and cascade into following pages
-    const subPages = paginateContinuousText(newPageContent, isFirst, hasAttachments);
+    const subPages = paginateContinuousText(newPageContent, isFirst, hasAttachments, maxCleanLines, maxAttachmentLines);
     pages.splice(pageIndex, 1, ...subPages);
   }
 
@@ -240,11 +255,16 @@ export function updateLetterPage(
 /**
  * Appends a new blank physical page to the letter.
  */
-export function addNewPageToLetter(fullBody: string, hasAttachments: boolean = false): {
+export function addNewPageToLetter(
+  fullBody: string,
+  hasAttachments: boolean = false,
+  maxCleanLines: number = MAX_LINES_CLEAN_PAGE,
+  maxAttachmentLines: number = MAX_LINES_PAGE_1_WITH_ATTACHMENTS
+): {
   updatedBody: string;
   newPageIndex: number;
 } {
-  const pages = splitLetterIntoPages(fullBody, hasAttachments);
+  const pages = splitLetterIntoPages(fullBody, hasAttachments, maxCleanLines, maxAttachmentLines);
   pages.push('');
   return {
     updatedBody: pages.join(PAGE_BREAK_DELIMITER),

@@ -38,8 +38,51 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
   const textAlign = entry.text_align || 'left';
   const photos = entry.photos || [];
   const hasAttachments = photos.length > 0 || (entry.attachments || []).some(a => a.type === 'audio');
+  const [pageCapacity, setPageCapacity] = useState<{ cleanLines: number; attachmentLines: number }>({
+    cleanLines: 16,
+    attachmentLines: 10,
+  });
 
-  const pages = splitLetterIntoPages(entry.body, hasAttachments);
+  // Dynamically calculate the exact amount of lines that fit the stationery sheet
+  useEffect(() => {
+    const calculateCapacity = () => {
+      if (!paperRef.current) return;
+      const sheetHeight = paperRef.current.clientHeight;
+      if (sheetHeight <= 0) return;
+
+      const computed = window.getComputedStyle(paperRef.current);
+      const lineHeight = parseFloat(computed.lineHeight) || 30.6;
+
+      // Overhead: top padding (36px) + bottom padding (32px) + date header (~30px) + safety margin (10px)
+      const overhead = 36 + 32 + 30 + 10;
+      const usableHeight = sheetHeight - overhead;
+
+      // Exact integer lines that fit completely inside the sheet without cutting off
+      const cleanLines = Math.max(10, Math.floor(usableHeight / lineHeight));
+      const attachmentLines = Math.max(6, Math.floor((usableHeight - 150) / lineHeight));
+
+      setPageCapacity((prev) => {
+        if (prev.cleanLines === cleanLines && prev.attachmentLines === attachmentLines) return prev;
+        return { cleanLines, attachmentLines };
+      });
+    };
+
+    calculateCapacity();
+    window.addEventListener('resize', calculateCapacity);
+
+    let observer: ResizeObserver | null = null;
+    if (paperRef.current && typeof window.ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(calculateCapacity);
+      observer.observe(paperRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculateCapacity);
+      observer?.disconnect();
+    };
+  }, [scale, fontFamily]);
+
+  const pages = splitLetterIntoPages(entry.body, hasAttachments, pageCapacity.cleanLines, pageCapacity.attachmentLines);
   const pageCount = pages.length;
 
   // Clamp current page index if pages array changes
@@ -62,7 +105,12 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
   };
 
   const handleAddPage = () => {
-    const { updatedBody, newPageIndex } = addNewPageToLetter(entry.body, hasAttachments);
+    const { updatedBody, newPageIndex } = addNewPageToLetter(
+      entry.body,
+      hasAttachments,
+      pageCapacity.cleanLines,
+      pageCapacity.attachmentLines
+    );
     onUpdateEntry({ ...entry, body: updatedBody });
     handlePageTurn(newPageIndex);
   };
@@ -542,7 +590,9 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                   entry.body,
                   currentPageIndex,
                   e.currentTarget.innerText,
-                  hasAttachments
+                  hasAttachments,
+                  pageCapacity.cleanLines,
+                  pageCapacity.attachmentLines
                 );
                 onUpdateEntry({ ...entry, body: updated });
               }}
