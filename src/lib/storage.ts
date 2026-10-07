@@ -62,7 +62,10 @@ export async function getAllEntries(): Promise<Entry[]> {
           await supabase.from('entries').delete().in('id', demoIds);
         }
 
-        const validEntries = (data as Entry[]).filter(e => !isDemoEntry(e));
+        const validEntries = (data as Entry[]).filter(e => !isDemoEntry(e)).map(e => ({
+          ...e,
+          for_them: Boolean(e.for_them || e.tags?.includes('For Them')),
+        }));
 
         // Sync valid entries to IndexedDB and purge demo entries locally
         const db = await openDB();
@@ -93,7 +96,10 @@ export async function getAllEntries(): Promise<Entry[]> {
         if (isDemoEntry(e)) {
           store.delete(e.id);
         } else {
-          cleanEntries.push(e);
+          cleanEntries.push({
+            ...e,
+            for_them: Boolean(e.for_them || e.tags?.includes('For Them')),
+          });
         }
       }
 
@@ -131,7 +137,17 @@ export async function saveEntry(entry: Entry): Promise<Entry> {
   // 2. Sync to Supabase in background
   if (supabase) {
     try {
-      await supabase.from('entries').upsert(entry);
+      const { error } = await supabase.from('entries').upsert(entry);
+      if (error) {
+        // If Supabase schema does not yet have 'for_them' column, fall back cleanly without it
+        // The tag 'For Them' is always saved inside tags: TEXT[] regardless
+        if (error.message?.includes('for_them') || error.code === 'PGRST204') {
+          const { for_them, ...cleanEntry } = entry;
+          await supabase.from('entries').upsert(cleanEntry);
+        } else {
+          console.warn('Supabase upsert warning:', error.message);
+        }
+      }
     } catch (err) {
       console.warn('Supabase upsert failed:', err);
     }

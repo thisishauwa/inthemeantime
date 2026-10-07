@@ -54,6 +54,9 @@ export function exportConsolidatedMarkdown(entries: Entry[], title = 'In the Mea
     if (entry.for_you) {
       md += `**Collection:** Curated For You\n`;
     }
+    if (entry.for_them || entry.tags?.includes('For Them')) {
+      md += `**Audience:** For Them (Future Kids)\n`;
+    }
     if (entry.tags && entry.tags.length > 0) {
       md += `**Tags:** ${entry.tags.map(t => `#${t}`).join(' ')}\n`;
     }
@@ -112,6 +115,7 @@ export async function exportZIPArchive(entries: Entry[], onlyForYou = false): Pr
     let entryMd = `# ${entry.title || 'Fragment'}\n\n`;
     entryMd += `**Date:** ${formatDate(entry.entry_date)}\n`;
     if (entry.for_you) entryMd += `**Marked for:** Curated For You\n`;
+    if (entry.for_them || entry.tags?.includes('For Them')) entryMd += `**Audience:** For Them (Future Kids)\n`;
     if (entry.tags && entry.tags.length > 0) {
       entryMd += `**Tags:** ${entry.tags.map(t => `#${t}`).join(', ')}\n`;
     }

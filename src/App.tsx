@@ -98,6 +98,7 @@ export function App() {
     updated_at: new Date().toISOString(),
     entry_date: new Date().toISOString(),
     for_you: true,
+    for_them: false,
     paper_style: 'pink',
     backdrop_color: '#237A57',
     font_family: 'Schoolbell',
@@ -144,6 +145,7 @@ export function App() {
       updated_at: new Date().toISOString(),
       entry_date: new Date().toISOString(),
       for_you: true,
+      for_them: false,
       paper_style: 'pink',
       backdrop_color: '#237A57',
       font_family: 'Schoolbell',
@@ -365,6 +367,22 @@ export function App() {
               forYou={activeEntry.for_you}
               onToggleForYou={() => {
                 handleUpdateActiveEntry({ ...activeEntry, for_you: !activeEntry.for_you });
+              }}
+              forThem={Boolean(activeEntry.for_them || activeEntry.tags?.includes('For Them'))}
+              onToggleForThem={() => {
+                const isCurrentlyForThem = Boolean(activeEntry.for_them || activeEntry.tags?.includes('For Them'));
+                const nextForThem = !isCurrentlyForThem;
+                let nextTags = [...(activeEntry.tags || [])];
+                if (nextForThem) {
+                  if (!nextTags.includes('For Them')) nextTags.push('For Them');
+                } else {
+                  nextTags = nextTags.filter((t) => t !== 'For Them');
+                }
+                handleUpdateActiveEntry({
+                  ...activeEntry,
+                  for_them: nextForThem,
+                  tags: nextTags,
+                });
               }}
               onAudioRecorded={handleAudioRecorded}
               onPhotoUploaded={handlePhotoUploaded}

@@ -281,18 +281,38 @@ input, textarea, select {
   justify-content: center;
 }
 
-.letter-pink-dot {
+.letter-badge-dots {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #EC4899;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   transition: opacity 0.15s ease;
   pointer-events: none;
 }
 
+.letter-pink-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #EC4899;
+  flex-shrink: 0;
+}
+
+.letter-amber-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #F59E0B;
+  flex-shrink: 0;
+}
+
+.letter-sidebar-row:hover .letter-badge-dots,
+.letter-sidebar-row.is-menu-open .letter-badge-dots,
 .letter-sidebar-row:hover .letter-pink-dot,
-.letter-sidebar-row.is-menu-open .letter-pink-dot {
+.letter-sidebar-row.is-menu-open .letter-pink-dot,
+.letter-sidebar-row:hover .letter-amber-dot,
+.letter-sidebar-row.is-menu-open .letter-amber-dot {
   opacity: 0;
 }
 

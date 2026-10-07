@@ -44,6 +44,7 @@ export interface Entry {
   updated_at: string;
   entry_date: string;
   for_you: boolean; // Flagged for the curated collection for the future person
+  for_them?: boolean; // Flagged for letters written to future kids ('For Them')
   is_favorite?: boolean;
   status?: 'draft' | 'instant' | 'scheduled' | 'sent';
   tags: string[];

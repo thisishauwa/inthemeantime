@@ -275,10 +275,15 @@ export const PostheartsSidebar: React.FC<PostheartsSidebarProps> = ({
 
                   {/* Right side: Fixed width action slot (Zero Layout Shift) */}
                   <div className="letter-action-slot">
-                    {/* Pink dot for "for_you" letters (smoothly fades out when row is hovered or menu is open) */}
-                    {entry.for_you && (
-                      <div className="letter-pink-dot" title="For You" />
-                    )}
+                    {/* Badge dots container (smoothly fades out when row is hovered or menu is open) */}
+                    <div className="letter-badge-dots">
+                      {entry.for_you && (
+                        <div className="letter-pink-dot" title="For You" />
+                      )}
+                      {(entry.for_them || entry.tags?.includes('For Them')) && (
+                        <div className="letter-amber-dot" title="For Them (Future Kids)" />
+                      )}
+                    </div>
 
                     {/* Three Dots Button (Always in DOM with fixed 26px size and 2px border, smoothly fades in) */}
                     <button

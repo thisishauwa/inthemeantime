@@ -15,11 +15,13 @@ export const SentLettersView: React.FC<SentLettersViewProps> = ({
   onNewLetter,
   onDeleteLetter,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'for_you'>('all');
+  const [filter, setFilter] = useState<'all' | 'for_you' | 'for_them'>('all');
 
   const forYouCount = entries.filter(e => e.for_you).length;
+  const forThemCount = entries.filter(e => e.for_them || e.tags?.includes('For Them')).length;
   const filtered = entries.filter((e) => {
     if (filter === 'for_you') return e.for_you;
+    if (filter === 'for_them') return Boolean(e.for_them || e.tags?.includes('For Them'));
     return true;
   });
 
@@ -122,6 +124,33 @@ export const SentLettersView: React.FC<SentLettersViewProps> = ({
             display: 'inline-block',
           }} />
           <span>For You ({forYouCount})</span>
+        </button>
+
+        <button
+          onClick={() => setFilter('for_them')}
+          style={{
+            padding: '6px 16px',
+            borderRadius: '999px',
+            fontSize: '0.84rem',
+            fontWeight: 500,
+            background: filter === 'for_them' ? '#F59E0B' : '#EEEEEE',
+            color: filter === 'for_them' ? '#FFFFFF' : '#4B5563',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.15s ease',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            background: filter === 'for_them' ? '#FFFFFF' : '#F59E0B',
+            display: 'inline-block',
+          }} />
+          <span>For Them ({forThemCount})</span>
         </button>
       </div>
 
@@ -260,6 +289,28 @@ export const SentLettersView: React.FC<SentLettersViewProps> = ({
                             display: 'inline-block',
                           }} />
                           <span>For You</span>
+                        </span>
+                      )}
+                      {(letter.for_them || letter.tags?.includes('For Them')) && (
+                        <span style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          color: '#B45309',
+                          background: '#FEF3C7',
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                        }}>
+                          <span style={{
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '50%',
+                            background: '#F59E0B',
+                            display: 'inline-block',
+                          }} />
+                          <span>For Them</span>
                         </span>
                       )}
                     </div>

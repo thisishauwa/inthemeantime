@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, FileText, Image as ImageIcon, Printer, Archive, Check, Loader2 } from 'lucide-react';
+import { X, FileText, Image as ImageIcon, Printer, Archive, Loader2 } from 'lucide-react';
 import type { Entry } from '../../types';
 import { downloadVisualPDF, downloadVisualImagesZip, openVisualPrintBook } from '../../lib/visualExport';
 import { exportZIPArchive } from '../../lib/exportUtils';
@@ -21,7 +21,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
   activeEntryId,
 }) => {
   const [timeframeMode, setTimeframeMode] = useState<TimeframeMode>('all');
-  const [onlyForYou, setOnlyForYou] = useState(false);
+  const [audienceFilter, setAudienceFilter] = useState<'all' | 'for_you' | 'for_them'>('all');
 
   // Sorted entries chronologically
   const sortedEntries = useMemo(() => {
@@ -70,12 +70,14 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
       }
     }
 
-    if (onlyForYou) {
+    if (audienceFilter === 'for_you') {
       result = result.filter((e) => e.for_you);
+    } else if (audienceFilter === 'for_them') {
+      result = result.filter((e) => Boolean(e.for_them || e.tags?.includes('For Them')));
     }
 
     return result;
-  }, [timeframeMode, sortedEntries, activeEntryId, startDate, endDate, fromLetterId, toLetterId, onlyForYou]);
+  }, [timeframeMode, sortedEntries, activeEntryId, startDate, endDate, fromLetterId, toLetterId, audienceFilter]);
 
   if (!isOpen) return null;
 
@@ -95,7 +97,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
       } else if (format === 'print-window') {
         openVisualPrintBook(selectedEntries);
       } else if (format === 'markdown-zip') {
-        await exportZIPArchive(selectedEntries, onlyForYou);
+        await exportZIPArchive(selectedEntries, audienceFilter === 'for_you');
       }
       setTimeout(() => {
         setIsExporting(false);
@@ -361,51 +363,102 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
               </div>
             )}
 
-            {/* Filter Toggle: "For You" */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px' }}>
-              <label
-                onClick={() => setOnlyForYou(!onlyForYou)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '0.84rem',
-                  color: '#374151',
-                  cursor: 'pointer',
-                }}
-              >
-                <div
+            {/* Filter Toggle: Audience Filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '6px 2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
+                  Audience Filter
+                </span>
+                {/* Counter Badge */}
+                <span
                   style={{
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '4px',
-                    border: onlyForYou ? '1px solid #EC4899' : '1px solid #D1D5DB',
-                    background: onlyForYou ? '#EC4899' : '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#FFFFFF',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    background: selectedEntries.length > 0 ? '#E0E7FF' : '#FEE2E2',
+                    color: selectedEntries.length > 0 ? '#3730A3' : '#991B1B',
+                  }}
+                >
+                  {selectedEntries.length} letter{selectedEntries.length === 1 ? '' : 's'} selected
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setAudienceFilter('all')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                    background: audienceFilter === 'all' ? '#111827' : '#F3F4F6',
+                    color: audienceFilter === 'all' ? '#FFFFFF' : '#4B5563',
+                    border: 'none',
+                    cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  {onlyForYou && <Check size={12} strokeWidth={3} />}
-                </div>
-                <span>Only letters marked &ldquo;For You&rdquo;</span>
-              </label>
+                  All Letters
+                </button>
 
-              {/* Counter Badge */}
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  padding: '3px 10px',
-                  borderRadius: '999px',
-                  background: selectedEntries.length > 0 ? '#E0E7FF' : '#FEE2E2',
-                  color: selectedEntries.length > 0 ? '#3730A3' : '#991B1B',
-                }}
-              >
-                {selectedEntries.length} letter{selectedEntries.length === 1 ? '' : 's'} selected
-              </span>
+                <button
+                  type="button"
+                  onClick={() => setAudienceFilter('for_you')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                    background: audienceFilter === 'for_you' ? '#EC4899' : '#F3F4F6',
+                    color: audienceFilter === 'for_you' ? '#FFFFFF' : '#4B5563',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: audienceFilter === 'for_you' ? '#FFFFFF' : '#EC4899',
+                    display: 'inline-block',
+                  }} />
+                  <span>For You</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAudienceFilter('for_them')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 500,
+                    background: audienceFilter === 'for_them' ? '#F59E0B' : '#F3F4F6',
+                    color: audienceFilter === 'for_them' ? '#FFFFFF' : '#4B5563',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: audienceFilter === 'for_them' ? '#FFFFFF' : '#F59E0B',
+                    display: 'inline-block',
+                  }} />
+                  <span>For Them</span>
+                </button>
+              </div>
             </div>
           </div>
 

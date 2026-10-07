@@ -8,6 +8,8 @@ interface PromptInputBarProps {
   onClear: () => void;
   forYou: boolean;
   onToggleForYou: () => void;
+  forThem?: boolean;
+  onToggleForThem?: () => void;
   onAudioRecorded?: (audioDataUrl: string, durationSec: number) => void;
   onPhotoUploaded?: (file: File) => void;
   isExpanded: boolean;
@@ -20,6 +22,8 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
   onClear,
   forYou,
   onToggleForYou,
+  forThem = false,
+  onToggleForThem,
   onAudioRecorded,
   onPhotoUploaded,
   isExpanded,
@@ -182,6 +186,38 @@ export const PromptInputBar: React.FC<PromptInputBarProps> = ({
             <span>For You</span>
             {forYou && <Check size={10} strokeWidth={3} />}
           </button>
+
+          {/* For Them toggle (Letters for future kids) */}
+          {onToggleForThem && (
+            <button
+              onClick={onToggleForThem}
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                padding: '2px 8px',
+                borderRadius: '999px',
+                background: forThem ? '#FEF3C7' : '#E2E2E4',
+                color: forThem ? '#92400E' : '#6B7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              title={forThem ? 'Marked for your future kids (For Them)' : 'Mark for your future kids (For Them)'}
+            >
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#F59E0B',
+                display: 'inline-block',
+              }} />
+              <span>For Them</span>
+              {forThem && <Check size={10} strokeWidth={3} />}
+            </button>
+          )}
         </div>
 
         {/* Expand / Collapse Button matching Image 1 & 2 */}
